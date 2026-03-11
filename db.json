@@ -1,0 +1,329 @@
+{
+  "users": [
+    {
+      "userId": "USR-1001",
+      "name": "Aung Ko Ko",
+      "phone": "+959123456789",
+      "email": "aungkoko@example.com",
+      "city": "Yangon",
+      "township": "Downtown",
+      "points": 1250,
+      "isActive": 1
+    }
+  ],
+  "serviceCategories": [
+    {
+      "serviceId": "plumbing",
+      "name": "Plumbing",
+      "serviceName": "Plumbing Service",
+      "baseAmount": 25000,
+      "priceFrom": 15000,
+      "priceTo": 50000,
+      "rating": 4.8,
+      "reviews": 234,
+      "description": "Professional plumbing services for all your water and pipe-related issues. Our certified plumbers can handle everything from leaks to installations.",
+      "isPopular": 1
+    },
+    {
+      "serviceId": "electrical",
+      "name": "Electrical",
+      "serviceName": "Electrical Service",
+      "baseAmount": 30000,
+      "priceFrom": 20000,
+      "priceTo": 60000,
+      "rating": 4.9,
+      "reviews": 189,
+      "description": "Expert electrical services for repairs, installations, and maintenance. Licensed electricians ensure safe and quality work.",
+      "isPopular": 1
+    },
+    {
+      "serviceId": "cleaning",
+      "name": "Cleaning",
+      "serviceName": "Cleaning Service",
+      "baseAmount": 35000,
+      "priceFrom": 25000,
+      "priceTo": 80000,
+      "rating": 4.7,
+      "reviews": 421,
+      "description": "Professional home and office cleaning services. Deep cleaning, regular maintenance, and specialized cleaning solutions.",
+      "isPopular": 1
+    },
+    {
+      "serviceId": "ac-repair",
+      "name": "AC Repair",
+      "serviceName": "AC Repair",
+      "baseAmount": 40000,
+      "priceFrom": 30000,
+      "priceTo": 100000,
+      "rating": 4.6,
+      "reviews": 156,
+      "description": "Air conditioning repair and maintenance services. Keep your AC running efficiently all year round.",
+      "isPopular": 1
+    },
+    {
+      "serviceId": "appliances",
+      "name": "Home Appliances",
+      "serviceName": "Appliance Repair",
+      "baseAmount": 25000,
+      "priceFrom": 25000,
+      "priceTo": 120000,
+      "rating": 4.8,
+      "reviews": 312,
+      "description": "Expert repair for refrigerators, washing machines, and microwave ovens. We handle motherboard issues and motor replacements.",
+      "isPopular": 0
+    },
+    {
+      "serviceId": "delivery",
+      "name": "Water & Gas",
+      "serviceName": "Water & Gas Delivery",
+      "baseAmount": 5000,
+      "priceFrom": 5000,
+      "priceTo": 25000,
+      "rating": 4.9,
+      "reviews": 845,
+      "description": "On-demand delivery for 20L purified water bottles and LPG cooking gas cylinders. Scheduled weekly refills available.",
+      "isPopular": 0
+    },
+    {
+      "serviceId": "generator",
+      "name": "Generator & Solar",
+      "serviceName": "Generator & Solar",
+      "baseAmount": 45000,
+      "priceFrom": 35000,
+      "priceTo": 150000,
+      "rating": 4.7,
+      "reviews": 128,
+      "description": "Maintenance and repair for home generators and solar power systems. Essential for reliable backup power during outages.",
+      "isPopular": 0
+    },
+    {
+      "serviceId": "pest-control",
+      "name": "Pest Control",
+      "serviceName": "Pest Control",
+      "baseAmount": 50000,
+      "priceFrom": 40000,
+      "priceTo": 200000,
+      "rating": 4.9,
+      "reviews": 215,
+      "description": "Professional fumigation and mosquito fogging services. Specialized in Dengue prevention and termite control.",
+      "isPopular": 0
+    }
+  ],
+  "advertisements": [
+    {
+      "id": 1,
+      "title": "Summer Special",
+      "subtitle": "Get 30% OFF on AC Services",
+      "image": "https://images.unsplash.com/photo-1744302570616-a450cd2191e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+      "bgColor": "from-cyan-600 to-blue-600",
+      "isActive": 1
+    },
+    {
+      "id": 2,
+      "title": "New User Bonus",
+      "subtitle": "Get 500 points on first booking",
+      "image": "https://images.unsplash.com/photo-1581578949510-fa7315c4c350?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+      "bgColor": "from-purple-600 to-pink-600",
+      "isActive": 1
+    },
+    {
+      "id": 3,
+      "title": "Plumbing Special",
+      "subtitle": "Book now and save 25%",
+      "image": "https://images.unsplash.com/photo-1709980378474-d5c30c4edbd3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+      "bgColor": "from-orange-600 to-red-600",
+      "isActive": 1
+    }
+  ],
+  "rewardRules": [
+    { "id": 1, "points": 50, "discountMMK": 1000 },
+    { "id": 2, "points": 100, "discountMMK": 3000 },
+    { "id": 3, "points": 250, "discountMMK": 8000 },
+    { "id": 4, "points": 500, "discountMMK": 18000 },
+    { "id": 5, "points": 1000, "discountMMK": 40000 }
+  ],
+  "userPoints": [
+    {
+      "id": "UP-1001",
+      "userId": "USR-1001",
+      "balance": 1250,
+      "updatedAt": "2026-03-10T09:00:00Z"
+    }
+  ],
+  "pointsTransactions": [
+    {
+      "id": "PT-0001",
+      "userId": "USR-1001",
+      "orderId": "ORD-12345",
+      "type": "redeem",
+      "points": 50,
+      "description": "Redeemed points for booking discount",
+      "createdAt": "2026-02-25T08:30:00Z"
+    },
+    {
+      "id": "PT-0002",
+      "userId": "USR-1001",
+      "orderId": "ORD-12345",
+      "type": "earn",
+      "points": 10,
+      "description": "Earned points after booking completion",
+      "createdAt": "2026-02-26T14:30:00Z"
+    },
+    {
+      "id": "PT-0003",
+      "userId": "USR-1001",
+      "orderId": "ORD-12343",
+      "type": "redeem",
+      "points": 100,
+      "description": "Redeemed points for booking discount",
+      "createdAt": "2026-02-14T07:00:00Z"
+    }
+  ],
+  "bookingPointUsage": [
+    {
+      "id": "BPU-0001",
+      "bookingId": "ORD-12345",
+      "userId": "USR-1001",
+      "pointsUsed": 50,
+      "discountMMK": 1000
+    },
+    {
+      "id": "BPU-0002",
+      "bookingId": "ORD-12343",
+      "userId": "USR-1001",
+      "pointsUsed": 100,
+      "discountMMK": 3000
+    }
+  ],
+  "providers": [
+    {
+      "id": "PRO-9001",
+      "name": "Ko Kyaw Min",
+      "serviceId": "plumbing",
+      "specialty": "Licensed Plumber",
+      "phone": "+959123456789",
+      "rating": 4.9,
+      "completedJobs": 127,
+      "isOnline": true,
+      "avatar": "https://images.unsplash.com/photo-1605504836193-e77d3d9ede8a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=300"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ORD-12345",
+      "userId": "USR-1001",
+      "serviceId": "plumbing",
+      "serviceName": "Plumbing Service",
+      "providerId": "PRO-9001",
+      "date": "2026-02-26",
+      "time": "14:00",
+      "dateLabel": "Feb 26, 2026",
+      "timeLabel": "2:00 PM",
+      "address": "Downtown, Yangon",
+      "status": "pending",
+      "statusStep": "on_the_way",
+      "subtotalMMK": 28000,
+      "redeemedPoints": 50,
+      "discountMMK": 1000,
+      "amountMMK": 27000,
+      "paymentMethod": "KBZPay",
+      "createdAt": "2026-02-25T08:30:00Z"
+    },
+    {
+      "id": "ORD-12344",
+      "userId": "USR-1001",
+      "serviceId": "ac-repair",
+      "service": "AC Repair",
+      "providerId": "PRO-9001",
+      "date": "2026-02-20",
+      "time": "10:00",
+      "dateLabel": "Feb 20, 2026",
+      "timeLabel": "10:00 AM",
+      "address": "Sanchaung, Yangon",
+      "status": "completed",
+      "statusStep": "completed",
+      "subtotalMMK": 45000,
+      "redeemedPoints": 0,
+      "discountMMK": 0,
+      "amountMMK": 45000,
+      "paymentMethod": "KBZPay",
+      "createdAt": "2026-02-19T07:00:00Z"
+    },
+    {
+      "id": "ORD-12343",
+      "userId": "USR-1001",
+      "serviceId": "electrical",
+      "service": "Electrical Service",
+      "providerId": "PRO-9001",
+      "date": "2026-02-15",
+      "time": "16:00",
+      "dateLabel": "Feb 15, 2026",
+      "timeLabel": "4:00 PM",
+      "address": "Bahan, Yangon",
+      "status": "completed",
+      "statusStep": "completed",
+      "subtotalMMK": 35000,
+      "redeemedPoints": 100,
+      "discountMMK": 3000,
+      "amountMMK": 32000,
+      "paymentMethod": "KBZPay",
+      "createdAt": "2026-02-14T07:00:00Z"
+    },
+    {
+      "id": "ORD-12342",
+      "userId": "USR-1001",
+      "serviceId": "cleaning",
+      "service": "Cleaning Service",
+      "providerId": "PRO-9001",
+      "date": "2026-02-10",
+      "time": "09:00",
+      "dateLabel": "Feb 10, 2026",
+      "timeLabel": "9:00 AM",
+      "address": "Hlaing, Yangon",
+      "status": "cancel",
+      "statusStep": "cancelled",
+      "subtotalMMK": 38000,
+      "redeemedPoints": 0,
+      "discountMMK": 0,
+      "amountMMK": 38000,
+      "paymentMethod": "KBZPay",
+      "createdAt": "2026-02-09T07:00:00Z"
+    }
+  ],
+  "reviews": [
+    {
+      "id": 1,
+      "orderId": "ORD-12344",
+      "serviceId": "ac-repair",
+      "userId": "USR-1001",
+      "reviewerId": "USR-1001",
+      "reviewerName": "Aung Ko Ko",
+      "name": "Aung Ko Ko",
+      "rating": 5,
+      "comment": "Great work and reasonable pricing. Highly recommended!",
+      "date": "2026-02-20"
+    },
+    {
+      "id": 2,
+      "orderId": "ORD-12343",
+      "serviceId": "electrical",
+      "userId": "USR-1001",
+      "reviewerId": "USR-1001",
+      "reviewerName": "Aung Ko Ko",
+      "name": "Aung Ko Ko",
+      "rating": 4,
+      "date": "2026-02-15"
+    },
+    {
+      "id": 3,
+      "orderId": "ORD-12345",
+      "serviceId": "plumbing",
+      "userId": "USR-1001",
+      "reviewerId": "USR-1001",
+      "reviewerName": "Aung Ko Ko",
+      "name": "Aung Ko Ko",
+      "rating": 5,
+      "date": "2026-02-26"
+    }
+  ]
+}
