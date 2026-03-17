@@ -4,10 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="./source/vconsole.min.js"></script>
+    <script src="./source/js-sdk.min.js"></script>
     <title>swiftfix</title>
   </head>
   <body>
+    <noscript>
+      <strong
+        >We're sorry js sdk doesn't work properly without JavaScript enabled.
+        Please enable it to continue.</strong
+      >
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      var vConsole = new VConsole();
+    </script>
   </body>
 </html>

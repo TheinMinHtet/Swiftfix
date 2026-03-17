@@ -1,4 +1,4 @@
-import { ArrowLeft, Phone, Star, Check } from "lucide-react";
+import { ArrowLeft, Phone, Check } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ImageWithFallback } from "../figma/ImageWithFallback.jsx";
 import { useEffect, useMemo, useState } from "react";
@@ -19,9 +19,7 @@ export function Tracking() {
   const [orderError, setOrderError] = useState("");
   const [provider, setProvider] = useState(null);
   const normalizeServiceId = (value) => {
-    const raw = (value || "").toString().trim().toLowerCase();
-    if (raw === "electrical") return "electrician";
-    return raw;
+    return (value || "").toString().trim().toLowerCase();
   };
 
   useEffect(() => {
@@ -258,15 +256,9 @@ export function Tracking() {
               <p className="text-sm text-gray-500">
                 {provider?.Mini_Shin__specialty__CST || "Service Provider"}
               </p>
-              <div className="flex items-center gap-1 mt-1">
-                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-medium text-gray-700">
-                  {provider?.Mini_Shin__rating__CST ?? "N/A"}
-                </span>
-                <span className="text-xs text-gray-500">
-                  ({provider?.Mini_Shin__completedJobs__CST ?? 0} jobs)
-                </span>
-              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Experience: {provider?.Mini_Shin__experience__CST ?? "N/A"}
+              </p>
             </div>
           </div>
 
