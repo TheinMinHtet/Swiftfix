@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { getServices } from "../../../api/services-api";
 import { getAdvertisements } from "../../../api/ads-api";
 import { mapApiServicesToCatalog } from "../../utils/services-catalog";
+import { getUsers } from "../../../api/user-api";
 const advertisementFallbackColors = [
   "from-cyan-600 to-blue-600",
   "from-purple-600 to-pink-600",
@@ -31,13 +32,36 @@ const resolveAdvertisementGradient = (bgColor, index) =>
   advertisementFallbackColors[index % advertisementFallbackColors.length];
 
 export function Home() {
-  const [userPoints] = useState(1250);
+  const [userPoints, setUserPoints] = useState(0);
   const [filteredServices, setFilteredServices] = useState([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [servicesError, setServicesError] = useState("");
   const [advertisements, setAdvertisements] = useState([]);
   const [isLoadingAds, setIsLoadingAds] = useState(true);
   const [adsError, setAdsError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUserPoints = async () => {
+      try {
+        const users = await getUsers("USR-1001");
+        const user = users?.[0];
+        const points =
+          user?.Mini_Shin__points__CST ??
+          user?.points ??
+          0;
+        if (isMounted) setUserPoints(points);
+      } catch (error) {
+        if (isMounted) setUserPoints(0);
+      }
+    };
+
+    loadUserPoints();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchServices = async () => {

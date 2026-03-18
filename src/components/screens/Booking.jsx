@@ -89,7 +89,7 @@ export function Booking() {
           firstUser?.Mini_Shin__userId__CST ||
           firstUser?.userId ||
           firstUser?.id ||
-          "";
+          "USR-1001";
         const defaultAddress =
           firstUser?.Mini_Shin__address__CST ||
           firstUser?.address ||
@@ -111,6 +111,9 @@ export function Booking() {
         }
       } catch (error) {
         console.error("Error fetching user info for address:", error);
+        if (!userId) {
+          setUserId("USR-1001");
+        }
       }
     };
 
@@ -204,23 +207,26 @@ export function Booking() {
       id ||
       "";
     const normalizeServiceId = (value) => {
-      const raw = (value || "").toString().trim().toLowerCase();
-      if (raw === "electrical") return "electrician";
-      return raw;
+      return (value || "").toString().trim().toLowerCase();
     };
     const normalizedServiceId = normalizeServiceId(serviceId);
     const onlineFirst = (providers || []).filter((provider) => {
-      const providerServiceId = normalizeServiceId(provider?.Mini_Shin__serviceId__CST || "");
+      const providerServiceId = normalizeServiceId(
+        provider?.Mini_Shin__serviceId__CST || provider?.serviceId || ""
+      );
       return providerServiceId === normalizedServiceId && provider?.Mini_Shin__isOnline__CST === 1;
     });
     const anyMatch = (providers || []).filter((provider) => {
-      const providerServiceId = normalizeServiceId(provider?.Mini_Shin__serviceId__CST || "");
+      const providerServiceId = normalizeServiceId(
+        provider?.Mini_Shin__serviceId__CST || provider?.serviceId || ""
+      );
       return providerServiceId === normalizedServiceId;
     });
     const selectedProvider = onlineFirst[0] || anyMatch[0] || null;
     const providerId =
       selectedProvider?.Mini_Shin__providerId__CST ||
       selectedProvider?.Mini_Shin__id__CST ||
+      selectedProvider?.id ||
       service?.Mini_Shin__providerId__CST ||
       "";
 

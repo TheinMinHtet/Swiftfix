@@ -202,8 +202,6 @@
       "serviceId": "plumbing",
       "specialty": "Licensed Plumber",
       "phone": "+959123456789",
-      "rating": 4.9,
-      "completedJobs": 127,
       "isOnline": true,
       "avatar": "https://images.unsplash.com/photo-1605504836193-e77d3d9ede8a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=300"
     }

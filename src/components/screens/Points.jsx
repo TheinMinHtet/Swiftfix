@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { ArrowLeft, Award, BadgePercent, ReceiptText, Info } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { getUsers } from '../../../api/user-api'
 
 // Updated with a 50-point entry tier for better feasibility
 const pointDiscountRules = [
@@ -11,8 +13,30 @@ const pointDiscountRules = [
 ]
 
 export function Points() {
-  // Demo user starts with points to make the goals feel reachable
-  const currentPoints = 1250
+  const [currentPoints, setCurrentPoints] = useState(0)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadUserPoints = async () => {
+      try {
+        const users = await getUsers('USR-1001')
+        const user = users?.[0]
+        const points =
+          user?.Mini_Shin__points__CST ??
+          user?.points ??
+          0
+        if (isMounted) setCurrentPoints(points)
+      } catch (error) {
+        if (isMounted) setCurrentPoints(0)
+      }
+    }
+
+    loadUserPoints()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
