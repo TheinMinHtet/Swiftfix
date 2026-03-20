@@ -109,7 +109,9 @@ export function ServiceDetail() {
   const servicePriceRange =
     typeof priceFrom === "number" && typeof priceTo === "number"
       ? `${priceFrom.toLocaleString()} - ${priceTo.toLocaleString()} MMK`
-      : "Contact for price";
+      : typeof priceFrom === "number"
+      ? `${priceFrom.toLocaleString()} MMK`
+      : "Price unavailable";
 
   if (isLoading) {
     return (
@@ -167,7 +169,7 @@ export function ServiceDetail() {
       {/* Service Image Banner */}
       <div className="relative h-56 bg-gray-200">
         <ImageWithFallback
-          src="https://images.unsplash.com/photo-1635221798248-8a3452ad07cd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwbHVtYmVyJTIwZml4aW5nJTIwc2luayUyMHByb2Zlc3Npb25hbHxlbnwxfHx8fDE3NzIxMTUxNjB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
+          src="https://images.unsplash.com/photo-1556911220-bff31c812dba?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
           alt={serviceName}
           className="w-full h-full object-cover"
         />

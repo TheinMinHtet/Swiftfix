@@ -1,4 +1,4 @@
-import { Search, MapPin, ChevronDown, Heart, Bell, Award } from "lucide-react";
+import { Search, MapPin, ChevronDown, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import Slider from "react-slick";
 import { useEffect, useState } from "react";
@@ -23,6 +23,26 @@ const advertisementGradientClasses = {
 const resolveAdvertisementGradient = (bgColor, index) =>
   advertisementGradientClasses[bgColor] ||
   advertisementFallbackColors[index % advertisementFallbackColors.length];
+
+function renderServiceTitle(name) {
+  const words = (name || "").trim().split(/\s+/).filter(Boolean);
+
+  if (words.length <= 1) {
+    return name;
+  }
+
+  const firstLine = words[0];
+  const secondLine = words.slice(1).join(" ");
+
+  return (
+    <>
+      <span className="block">{firstLine}</span>
+      <span className="block overflow-hidden text-ellipsis whitespace-nowrap" title={name}>
+        {secondLine}
+      </span>
+    </>
+  );
+}
 
 export function Home() {
   const [userPoints, setUserPoints] = useState(0);
@@ -132,12 +152,6 @@ export function Home() {
             <p className="text-blue-100 text-sm">Welcome !</p>
             <h1 className="text-white text-2xl mt-1">Aung Ko Ko</h1>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Top Right Icons */}
-            <button className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-400 transition-colors relative">
-              <Heart className="w-5 h-5 text-white" />
-            </button>
-          </div>
         </div>
 
         {/* Points Card */}
@@ -223,7 +237,6 @@ export function Home() {
                     <h3 className="text-gray-800 font-medium text-sm">
                       {service.name}
                     </h3>
-                    <p className="text-gray-500 text-xs mt-0.5">Professional</p>
                   </Link>
                 );
               })}
@@ -255,7 +268,7 @@ export function Home() {
                     <div
                       className={`bg-gradient-to-r ${ad.bgColor} rounded-2xl p-5 shadow-md overflow-hidden relative h-40`}
                     >
-                      <div className="relative z-10 flex flex-col justify-between h-full">
+                      <div className="relative z-10 flex flex-col h-full justify-center">
                         <div>
                           <div className="inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full mb-2">
                             LIMITED TIME
@@ -265,9 +278,6 @@ export function Home() {
                           </h3>
                           <p className="text-white/90 text-sm">{ad.subtitle}</p>
                         </div>
-                        <button className="bg-white text-blue-600 mt-2 px-3 py-2 rounded-full text-sm font-medium hover:bg-blue-50 transition-colors w-fit">
-                          Claim Now
-                        </button>
                       </div>
                       {ad.image && (
                         <div
@@ -305,9 +315,11 @@ export function Home() {
                   >
                     <Icon className="w-7 h-7" />
                   </div>
-                  <h3 className="text-gray-800 font-medium">{service.name}</h3>
+                  <h3 className="text-gray-800 font-medium leading-5 min-h-10">
+                    {renderServiceTitle(service.name)}
+                  </h3>
                   <p className="text-gray-500 text-xs mt-1">
-                    Starting at 15,000 MMK
+                    {service.priceLabel}
                   </p>
                 </Link>
               );

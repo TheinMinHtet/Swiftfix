@@ -7,6 +7,29 @@ import { useEffect, useRef, useState } from 'react'
 import { getServices } from '../../../api/services-api'
 import { mapApiServicesToCatalog } from '../../utils/services-catalog'
 
+function renderServiceTitle(name) {
+  const words = (name || '').trim().split(/\s+/).filter(Boolean)
+
+  if (words.length <= 1) {
+    return name
+  }
+
+  const firstLine = words[0]
+  const secondLine = words.slice(1).join(' ')
+
+  return (
+    <>
+      <span className="block">{firstLine}</span>
+      <span
+        className="block overflow-hidden text-ellipsis whitespace-nowrap"
+        title={name}
+      >
+        {secondLine}
+      </span>
+    </>
+  )
+}
+
 export function Services() {
   const location = useLocation()
   const [searchTerm, setSearchTerm] = useState('')
@@ -31,10 +54,7 @@ export function Services() {
         setIsLoadingServices(true)
         setServicesError('')
         const services = await getServices()
-        const catalog = mapApiServicesToCatalog(services).map((service) => ({
-          ...service,
-          price: 'Contact for price',
-        }))
+        const catalog = mapApiServicesToCatalog(services)
         setAllServices(catalog)
       } catch (error) {
         console.error('Error fetching services:', error)
@@ -87,13 +107,17 @@ export function Services() {
               <Link
                 key={service.id}
                 to={`/service/${service.id}`}
-                className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+                className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow h-full flex flex-col"
               >
                 <div className={`w-14 h-14 ${service.color} rounded-2xl flex items-center justify-center mb-3`}>
                   <Icon className="w-7 h-7" />
                 </div>
-                <h3 className="text-gray-800 font-medium">{service.name}</h3>
-                <p className="text-gray-500 text-xs mt-1">{service.price}</p>
+                <h3
+                  className="text-gray-800 font-medium leading-5 min-h-10"
+                >
+                  {renderServiceTitle(service.name)}
+                </h3>
+                <p className="text-gray-500 text-xs mt-2">{service.priceLabel}</p>
               </Link>
             )
           })}

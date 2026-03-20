@@ -1,6 +1,6 @@
-import { ArrowLeft, Calendar, Clock, MapPin, Upload, CreditCard } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, Upload, CreditCard, Pencil } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getServices } from "../../../api/services-api";
 import { getUsers } from "../../../api/user-api";
 import { createOrder } from "../../../api/orders-api";
@@ -16,6 +16,40 @@ const discountMap = {
   1000: 40000,
 };
 
+const timeSlots = ["09:00 AM", "11:00 AM", "02:00 PM", "04:00 PM", "06:00 PM", "08:00 PM"];
+
+const padNumber = (value) => value.toString().padStart(2, "0");
+
+const formatLocalDateInput = (date) =>
+  `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
+
+const parseTimeSlot = (timeLabel) => {
+  const timeMatch = (timeLabel || "").match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!timeMatch) return null;
+
+  let hours = Number(timeMatch[1]);
+  const minutes = Number(timeMatch[2]);
+  const meridiem = timeMatch[3].toUpperCase();
+
+  if (meridiem === "PM" && hours < 12) hours += 12;
+  if (meridiem === "AM" && hours === 12) hours = 0;
+
+  return { hours, minutes };
+};
+
+const isPastTimeSlotForDate = (dateValue, timeLabel) => {
+  if (!dateValue || !timeLabel) return false;
+
+  const parsedTime = parseTimeSlot(timeLabel);
+  if (!parsedTime) return false;
+
+  const [year, month, day] = dateValue.split("-").map(Number);
+  if (!year || !month || !day) return false;
+
+  const scheduledDate = new Date(year, month - 1, day, parsedTime.hours, parsedTime.minutes, 0, 0);
+  return scheduledDate.getTime() <= Date.now();
+};
+
 export function Booking() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -25,7 +59,9 @@ export function Booking() {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [address, setAddress] = useState("");
+  const [draftAddress, setDraftAddress] = useState("");
   const [addressTouched, setAddressTouched] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [phone, setPhone] = useState("");
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [userId, setUserId] = useState("");
@@ -34,6 +70,8 @@ export function Booking() {
   const [showRequiredError, setShowRequiredError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const today = useMemo(() => formatLocalDateInput(new Date()), []);
+  const addressInputRef = useRef(null);
 
   useEffect(() => {
     const fetchService = async () => {
@@ -105,6 +143,7 @@ export function Booking() {
         }
         if (!addressTouched && defaultAddress) {
           setAddress(defaultAddress);
+          setDraftAddress(defaultAddress);
         }
         if (!phoneTouched && defaultPhone) {
           setPhone(defaultPhone);
@@ -137,17 +176,39 @@ export function Booking() {
     points <= currentPoints &&
     (discountMap[points] || 0) <= subtotal
 );
+  const availableTimeSlots = useMemo(
+    () => timeSlots.filter((time) => !isPastTimeSlotForDate(selectedDate, time)),
+    [selectedDate],
+  );
+  const isSelectedTimeInPast = isPastTimeSlotForDate(selectedDate, selectedTime);
+  const hasAddressChanges = draftAddress.trim() !== address.trim();
+  const addressNeedsConfirmation = isEditingAddress || hasAddressChanges;
   const isBookingInfoValid =
     selectedDate.trim() !== "" &&
     selectedTime.trim() !== "" &&
+    !isSelectedTimeInPast &&
     address.trim() !== "" &&
+    !addressNeedsConfirmation &&
     phone.trim() !== "";
   const dateMissing = showRequiredError && selectedDate.trim() === "";
-  const timeMissing = showRequiredError && selectedTime.trim() === "";
+  const timeMissing =
+    showRequiredError && (selectedTime.trim() === "" || isSelectedTimeInPast);
   const addressMissing = showRequiredError && address.trim() === "";
   const phoneMissing = showRequiredError && phone.trim() === "";
   const formatMMK = (amount) =>
     `${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`;
+
+  useEffect(() => {
+    if (selectedTime && isPastTimeSlotForDate(selectedDate, selectedTime)) {
+      setSelectedTime("");
+    }
+  }, [selectedDate, selectedTime]);
+
+  useEffect(() => {
+    if (!isEditingAddress) {
+      setDraftAddress(address);
+    }
+  }, [address, isEditingAddress]);
 
   if (isLoadingService) {
     return (
@@ -303,7 +364,7 @@ export function Booking() {
                 ? "border-red-400 focus:ring-red-400"
                 : "border-gray-200 focus:ring-blue-500"
             }`}
-            min={new Date().toISOString().split('T')[0]}
+            min={today}
           />
           {dateMissing && (
             <p className="text-xs text-red-600 mt-2">Date is required.</p>
@@ -322,14 +383,17 @@ export function Booking() {
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {["09:00 AM", "11:00 AM", "02:00 PM", "04:00 PM", "06:00 PM", "08:00 PM"].map((time) => (
+            {timeSlots.map((time) => (
               <button
                 key={time}
                 onClick={() => setSelectedTime(time)}
+                disabled={!availableTimeSlots.includes(time)}
                 className={`py-3 px-2 rounded-xl text-sm font-medium transition-colors ${
                   selectedTime === time
                     ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : availableTimeSlots.includes(time)
+                    ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
                 }`}
               >
                 {time}
@@ -337,37 +401,83 @@ export function Booking() {
             ))}
           </div>
           {timeMissing && (
-            <p className="text-xs text-red-600 mt-2">Time is required.</p>
+            <p className="text-xs text-red-600 mt-2">
+              {selectedTime.trim() !== "" && isSelectedTimeInPast
+                ? "Please choose a future time slot."
+                : "Time is required."}
+            </p>
+          )}
+          {selectedDate === today && availableTimeSlots.length === 0 && (
+            <p className="text-xs text-amber-600 mt-2">
+              No time slots are available for today. Please choose another date.
+            </p>
           )}
         </div>
 
         {/* Address Input */}
         <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-blue-600" />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">Service Address</h3>
+                <p className="text-xs text-gray-500">Where should we come?</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-800">Service Address</h3>
-              <p className="text-xs text-gray-500">Where should we come?</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingAddress(true);
+                setDraftAddress(address);
+                setAddressTouched(true);
+                setTimeout(() => addressInputRef.current?.focus(), 0);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </button>
+            {isEditingAddress && hasAddressChanges && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAddress(draftAddress);
+                  setAddressTouched(true);
+                  setIsEditingAddress(false);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-100"
+              >
+                Confirm
+              </button>
+            )}
           </div>
           <textarea
-            value={address}
+            ref={addressInputRef}
+            value={isEditingAddress ? draftAddress : address}
             onChange={(e) => {
-              setAddress(e.target.value);
-              if (!addressTouched) setAddressTouched(true);
+              setDraftAddress(e.target.value);
             }}
             placeholder="Enter your full address..."
+            readOnly={!isEditingAddress}
             className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 resize-none ${
               addressMissing
                 ? "border-red-400 focus:ring-red-400"
                 : "border-gray-200 focus:ring-blue-500"
-            }`}
+            } ${!isEditingAddress ? "bg-gray-50 text-gray-500 cursor-default" : "bg-white text-gray-800"}`}
             rows={3}
           />
+          {!isEditingAddress && address.trim() !== "" && (
+            <p className="text-xs text-gray-500 mt-2">Tap Edit to change this location.</p>
+          )}
           {addressMissing && (
             <p className="text-xs text-red-600 mt-2">Service Address is required.</p>
+          )}
+          {showRequiredError && addressNeedsConfirmation && (
+            <p className="text-xs text-red-600 mt-2">
+              Please confirm your address changes before booking.
+            </p>
           )}
         </div>
 
@@ -496,7 +606,7 @@ export function Booking() {
         )}
         {showRequiredError && (
           <p className="text-sm text-red-600 mt-3">
-            Please fill Date, Time, Service Address, and Phone Number before confirming booking.
+            Please fill Date, Time, Service Address, and Phone Number with a valid future booking time, and confirm any address changes before booking.
           </p>
         )}
       </div>

@@ -1,10 +1,89 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clock, CheckCircle, XCircle, Star } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Star, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getOrders } from "../../../api/orders-api";
 import { getReviews } from "../../../api/reviews-api";
 
-const filters = ["all", "pending", "confirmed", "completed", "rejected"];
+const filters = ["all", "pending", "confirmed", "completed"];
+
+const getStatusLabel = (status) => {
+  if (status === "confirmed") return "On the Way";
+  return status;
+};
+
+const parseTimeParts = (value) => {
+  const timeText = (value || "").toString().trim();
+  if (!timeText) return null;
+
+  const amPmMatch = timeText.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (amPmMatch) {
+    let hours = Number(amPmMatch[1]);
+    const minutes = Number(amPmMatch[2] || "0");
+    const meridiem = amPmMatch[3].toUpperCase();
+    if (meridiem === "PM" && hours < 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    return { hours, minutes };
+  }
+
+  const twentyFourMatch = timeText.match(/^(\d{1,2})(?::(\d{2}))$/);
+  if (twentyFourMatch) {
+    return {
+      hours: Number(twentyFourMatch[1]),
+      minutes: Number(twentyFourMatch[2] || "0"),
+    };
+  }
+
+  return null;
+};
+
+const getScheduledTimestamp = (order) => {
+  const dateValue =
+    order?.Mini_Shin__date__CST ||
+    order?.date ||
+    order?.Mini_Shin__dateLabel__CST ||
+    order?.dateLabel;
+  if (!dateValue) return Number.NaN;
+
+  const scheduled = new Date(dateValue);
+  if (Number.isNaN(scheduled.getTime())) return Number.NaN;
+
+  const timeValue =
+    order?.Mini_Shin__time__CST ||
+    order?.time ||
+    order?.Mini_Shin__timeLabel__CST ||
+    order?.timeLabel;
+  const parsedTime = parseTimeParts(timeValue);
+  if (parsedTime) {
+    scheduled.setHours(parsedTime.hours, parsedTime.minutes, 0, 0);
+  }
+
+  return scheduled.getTime();
+};
+
+const getOrderSortValue = (order) => {
+  const latestCandidates = [
+    order?.Mini_Shin__updatedDate__CST,
+    order?.updatedDate,
+    order?.Mini_Shin__createdDate__CST,
+    order?.createdDate,
+  ];
+
+  for (const value of latestCandidates) {
+    const timestamp = new Date(value || "").getTime();
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+
+  const scheduledTimestamp = getScheduledTimestamp(order);
+  if (!Number.isNaN(scheduledTimestamp)) {
+    return scheduledTimestamp;
+  }
+
+  const fallbackId = order?.Mini_Shin__orderId__CST || order?.Mini_Shin__id__CST || order?.orderId || order?.id || "";
+  const numericMatch = fallbackId.toString().match(/\d+/g);
+  return numericMatch ? Number(numericMatch.join("")) : 0;
+};
 
 export function Orders() {
   const [activeFilter, setActiveFilter] = useState("all");
@@ -14,6 +93,8 @@ export function Orders() {
   const [reviewedOrderIds, setReviewedOrderIds] = useState(new Set());
   const actionButtonClass =
     "inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors";
+  const secondaryActionButtonClass =
+    "inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors";
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -21,20 +102,23 @@ export function Orders() {
         setIsLoading(true);
         setOrdersError("");
         const data = await getOrders();
-        const normalized = (data || []).map((order) => {
-          const recordId = order.Mini_Shin__id__CST || order.id || "";
-          const orderNo = order.Mini_Shin__orderId__CST || recordId;
-          return {
-            id: recordId,
-            orderNo,
-            service: order.Mini_Shin__serviceName__CST || order.service || "",
-            serviceId: order.Mini_Shin__serviceId__CST || order.serviceId || "",
-            date: order.Mini_Shin__dateLabel__CST || order.dateLabel || "",
-            time: order.Mini_Shin__timeLabel__CST || order.timeLabel || "",
-            status: (order.Mini_Shin__status__CST || order.status || "pending").toLowerCase(),
-            amountMMK: order.Mini_Shin__amountMMK__CST ?? order.amountMMK ?? 0,
-          };
-        });
+        const normalized = (data || [])
+          .slice()
+          .sort((a, b) => getOrderSortValue(b) - getOrderSortValue(a))
+          .map((order) => {
+            const recordId = order.Mini_Shin__id__CST || order.id || "";
+            const orderNo = order.Mini_Shin__orderId__CST || recordId;
+            return {
+              id: recordId,
+              orderNo,
+              service: order.Mini_Shin__serviceName__CST || order.service || "",
+              serviceId: order.Mini_Shin__serviceId__CST || order.serviceId || "",
+              date: order.Mini_Shin__dateLabel__CST || order.dateLabel || "",
+              time: order.Mini_Shin__timeLabel__CST || order.timeLabel || "",
+              status: (order.Mini_Shin__status__CST || order.status || "pending").toLowerCase(),
+              amountMMK: order.Mini_Shin__amountMMK__CST ?? order.amountMMK ?? 0,
+            };
+          });
         setOrders(normalized);
       } catch (error) {
         console.error("Error fetching orders:", error);
@@ -81,7 +165,7 @@ export function Orders() {
       case "pending":
         return <Clock className="w-5 h-5 text-blue-600" />;
       case "confirmed":
-        return <CheckCircle className="w-5 h-5 text-blue-600" />;
+        return <Truck className="w-5 h-5 text-blue-600" />;
       case "completed":
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case "rejected":
@@ -178,7 +262,7 @@ export function Orders() {
                       order.status,
                     )}`}
                   >
-                    {order.status}
+                    {getStatusLabel(order.status)}
                   </span>
                   <span className="font-semibold text-gray-800">{formatMMK(order.amountMMK)}</span>
                 </div>
@@ -189,7 +273,7 @@ export function Orders() {
                       to={`/tracking/${order.orderNo || order.id}`}
                       className={actionButtonClass}
                     >
-                      Waiting for confirmation
+                      View Pending Status
                     </Link>
                   </div>
                 )}
@@ -205,15 +289,23 @@ export function Orders() {
                   </div>
                 )}
 
-                {order.status === "completed" && !reviewedOrderIds.has(order.orderNo || order.id) && (
-                  <div className="mt-2 flex justify-end">
+                {order.status === "completed" && (
+                  <div className="mt-2 flex justify-end gap-2 flex-wrap">
                     <Link
-                      to={`/rating/${order.id}?service=${encodeURIComponent(order.service)}&serviceId=${encodeURIComponent(order.serviceId)}&orderNo=${encodeURIComponent(order.orderNo || "")}`}
-                      className={actionButtonClass}
+                      to={`/tracking/${order.orderNo || order.id}`}
+                      className={secondaryActionButtonClass}
                     >
-                      <Star className="w-3.5 h-3.5 fill-blue-700 text-blue-700" />
-                      Write Review
+                      View Service
                     </Link>
+                    {!reviewedOrderIds.has(order.orderNo || order.id) && (
+                      <Link
+                        to={`/rating/${order.id}?service=${encodeURIComponent(order.service)}&serviceId=${encodeURIComponent(order.serviceId)}&orderNo=${encodeURIComponent(order.orderNo || "")}`}
+                        className={actionButtonClass}
+                      >
+                        <Star className="w-3.5 h-3.5 fill-blue-700 text-blue-700" />
+                        Write Review
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>

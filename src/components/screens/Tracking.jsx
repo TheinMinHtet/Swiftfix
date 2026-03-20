@@ -1,4 +1,4 @@
-import { ArrowLeft, Phone, Check } from "lucide-react";
+import { ArrowLeft, Phone, Check, Truck } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ImageWithFallback } from "../figma/ImageWithFallback.jsx";
 import { useEffect, useMemo, useState } from "react";
@@ -6,11 +6,35 @@ import { getOrders } from "../../../api/orders-api";
 import { getProviders } from "../../../api/providers-api";
 
 const baseStatuses = [
-  { id: 1, label: "Requested", description: "Booking received" },
-  { id: 2, label: "Confirmation", description: "Waiting for confirmation" },
-  { id: 3, label: "On the Way", description: "Provider heading to location" },
-  { id: 4, label: "Completed", description: "Service completed" },
+  { id: 1, label: "Pending", description: "Your booking request has been submitted and is waiting for payment." },
+  { id: 2, label: "On the Way", description: "Payment received. Your provider is on the way to your location." },
+  { id: 3, label: "Completed", description: "The service has been completed successfully." },
 ];
+
+const parseTimeParts = (value) => {
+  const timeText = (value || "").toString().trim();
+  if (!timeText) return null;
+
+  const amPmMatch = timeText.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (amPmMatch) {
+    let hours = Number(amPmMatch[1]);
+    const minutes = Number(amPmMatch[2] || "0");
+    const meridiem = amPmMatch[3].toUpperCase();
+    if (meridiem === "PM" && hours < 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    return { hours, minutes };
+  }
+
+  const twentyFourMatch = timeText.match(/^(\d{1,2})(?::(\d{2}))$/);
+  if (twentyFourMatch) {
+    return {
+      hours: Number(twentyFourMatch[1]),
+      minutes: Number(twentyFourMatch[2] || "0"),
+    };
+  }
+
+  return null;
+};
 
 export function Tracking() {
   const { orderId } = useParams();
@@ -90,9 +114,9 @@ export function Tracking() {
   const status = (order?.Mini_Shin__status__CST || order?.status || "pending").toLowerCase();
   const statusStep = (order?.Mini_Shin__statusStep__CST || order?.statusStep || "").toLowerCase();
   const currentStep = useMemo(() => {
-    if (status === "completed") return 3;
+    if (status === "completed") return 2;
     if (status === "confirmed") {
-      if (statusStep === "on_the_way") return 2;
+      if (statusStep === "on_the_way") return 1;
       if (statusStep === "assigned") return 1;
       return 1;
     }
@@ -100,33 +124,46 @@ export function Tracking() {
     return 0;
   }, [status, statusStep]);
 
-  const orderStatuses = baseStatuses.map((item, index) => ({
-    ...item,
-    completed: index < currentStep,
-  }));
+  const orderStatuses = baseStatuses.map((item, index) => {
+    const isCompletedStep = status === "completed" ? index <= currentStep : index < currentStep;
+    const isCurrentStep = status === "completed" ? false : index === currentStep;
 
-  const showProvider = status === "confirmed" || status === "completed";
-  const showEta = status === "confirmed" && currentStep >= 2;
+    return {
+      ...item,
+      completed: isCompletedStep,
+      current: isCurrentStep,
+    };
+  });
+
+  const showProvider = status === "confirmed";
+  const showEta = status === "confirmed" && currentStep >= 1;
+  const isPaidStatus = status === "confirmed" || status === "completed";
   const formatMMK = (amount) =>
     `${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`;
 
   const etaText = useMemo(() => {
-    const date = order?.Mini_Shin__date__CST || order?.date;
-    const time = order?.Mini_Shin__time__CST || order?.time;
-    if (!date || !time) return "ETA not available";
-    const timeMatch = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-    let hours = 0;
-    let minutes = 0;
-    if (timeMatch) {
-      hours = Number(timeMatch[1]);
-      minutes = Number(timeMatch[2]);
-      const meridiem = timeMatch[3].toUpperCase();
-      if (meridiem === "PM" && hours < 12) hours += 12;
-      if (meridiem === "AM" && hours === 12) hours = 0;
-    }
+    const date =
+      order?.Mini_Shin__date__CST ||
+      order?.date ||
+      order?.Mini_Shin__dateLabel__CST ||
+      order?.dateLabel;
+    const time =
+      order?.Mini_Shin__time__CST ||
+      order?.time ||
+      order?.Mini_Shin__timeLabel__CST ||
+      order?.timeLabel;
+    if (!date) return "ETA not available";
+
     const scheduled = new Date(date);
     if (Number.isNaN(scheduled.getTime())) return "ETA not available";
-    scheduled.setHours(hours, minutes, 0, 0);
+
+    const parsedTime = parseTimeParts(time);
+    if (parsedTime) {
+      scheduled.setHours(parsedTime.hours, parsedTime.minutes, 0, 0);
+    } else {
+      scheduled.setHours(0, 0, 0, 0);
+    }
+
     const diffMs = scheduled.getTime() - Date.now();
     if (diffMs <= 0) return "Arriving now";
     const diffMinutes = Math.ceil(diffMs / 60000);
@@ -180,7 +217,9 @@ export function Tracking() {
                     className={`w-10 h-10 rounded-full flex items-center justify-center ${
                       status.completed
                         ? "bg-blue-600"
-                        : index === currentStep
+                        : status.current && index === 1
+                        ? "bg-blue-600"
+                        : status.current
                         ? "bg-blue-100 border-2 border-blue-600"
                         : "bg-gray-100"
                     }`}
@@ -188,11 +227,15 @@ export function Tracking() {
                     {status.completed ? (
                       <Check className="w-5 h-5 text-white" />
                     ) : (
-                      <div
-                        className={`w-3 h-3 rounded-full ${
-                          index === currentStep ? "bg-blue-600" : "bg-gray-300"
-                        }`}
-                      />
+                      status.current && index === 1 ? (
+                        <Check className="w-5 h-5 text-white" />
+                      ) : (
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            status.current ? "bg-blue-600" : "bg-gray-300"
+                          }`}
+                        />
+                      )
                     )}
                   </div>
                   {index < orderStatuses.length - 1 && (
@@ -208,7 +251,7 @@ export function Tracking() {
                 <div className="flex-1 pb-4">
                   <h3
                     className={`font-semibold ${
-                      status.completed || index === currentStep
+                      status.completed || status.current
                         ? "text-gray-800"
                         : "text-gray-400"
                     }`}
@@ -217,16 +260,20 @@ export function Tracking() {
                   </h3>
                   <p
                     className={`text-sm ${
-                      status.completed || index === currentStep
+                      status.completed || status.current
                         ? "text-gray-600"
                         : "text-gray-400"
                     }`}
                   >
                     {status.description}
                   </p>
-                  {index === currentStep && status !== "rejected" && (
+                  {status.current && status !== "rejected" && (
                     <div className="mt-2 inline-block bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">
-                      {status === "pending" ? "Waiting for confirmation" : "In Progress"}
+                      {index === 0
+                        ? "Pending"
+                        : index === 1
+                        ? "On the Way"
+                        : "Completed"}
                     </div>
                   )}
                 </div>
@@ -303,9 +350,16 @@ export function Tracking() {
             <div className="h-px bg-gray-200 my-2" />
             <div className="flex justify-between">
               <span className="font-semibold text-gray-800">Total Amount</span>
-              <span className="font-semibold text-blue-600">
-                {formatMMK(order.Mini_Shin__amountMMK__CST ?? order.amountMMK)}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`font-semibold ${isPaidStatus ? "text-green-600" : "text-blue-600"}`}>
+                  {formatMMK(order.Mini_Shin__amountMMK__CST ?? order.amountMMK)}
+                </span>
+                {isPaidStatus && (
+                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                    Paid
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
