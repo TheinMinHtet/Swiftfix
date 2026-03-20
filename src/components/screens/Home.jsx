@@ -1,11 +1,4 @@
-import {
-  Search,
-  MapPin,
-  ChevronDown,
-  Heart,
-  Bell,
-  Award,
-} from "lucide-react";
+import { Search, MapPin, ChevronDown, Heart, Bell, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import Slider from "react-slick";
 import { useEffect, useState } from "react";
@@ -47,12 +40,10 @@ export function Home() {
       try {
         const users = await getUsers("USR-1001");
         const user = users?.[0];
-        const points =
-          user?.Mini_Shin__points__CST ??
-          user?.points ??
-          0;
+        const points = user?.Mini_Shin__points__CST ?? user?.points ?? 0;
         if (isMounted) setUserPoints(points);
       } catch (error) {
+        console.error("Failed to load user points:", error);
         if (isMounted) setUserPoints(0);
       }
     };
@@ -89,14 +80,16 @@ export function Home() {
         setAdsError("");
         const ads = await getAdvertisements();
         const normalized = (ads || [])
-          .filter((ad) => ad && (
-            ad.Mini_Shin__isActive__CST === undefined ||
-            ad.Mini_Shin__isActive__CST === true ||
-            ad.Mini_Shin__isActive__CST === 1 ||
-            ad.isActive === undefined ||
-            ad.isActive === true ||
-            ad.isActive === 1
-          ))
+          .filter(
+            (ad) =>
+              ad &&
+              (ad.Mini_Shin__isActive__CST === undefined ||
+                ad.Mini_Shin__isActive__CST === true ||
+                ad.Mini_Shin__isActive__CST === 1 ||
+                ad.isActive === undefined ||
+                ad.isActive === true ||
+                ad.isActive === 1),
+          )
           .map((ad, index) => ({
             id: ad.Mini_Shin__id__CST ?? ad.id ?? index,
             title: ad.Mini_Shin__title__CST || ad.title || "Special Offer",
@@ -104,7 +97,7 @@ export function Home() {
             image: ad.Mini_Shin__image__CST || ad.image || "",
             bgColor: resolveAdvertisementGradient(
               ad.Mini_Shin__bgColor__CST || ad.bgColor,
-              index
+              index,
             ),
           }));
         setAdvertisements(normalized);
@@ -158,8 +151,12 @@ export function Home() {
                 <Award className="w-6 h-6 text-yellow-600" />
               </div>
               <div>
-                <p className="text-yellow-900 text-xs font-medium">Current Points</p>
-                <p className="text-yellow-900 font-semibold text-lg">{userPoints} pts</p>
+                <p className="text-yellow-900 text-xs font-medium">
+                  Current Points
+                </p>
+                <p className="text-yellow-900 font-semibold text-lg">
+                  {userPoints} pts
+                </p>
               </div>
             </div>
             <div>
@@ -185,7 +182,9 @@ export function Home() {
           className="w-full bg-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm text-left"
         >
           <Search className="w-5 h-5 text-gray-400" aria-hidden="true" />
-          <span className="flex-1 text-sm text-gray-400">What service do you need?</span>
+          <span className="flex-1 text-sm text-gray-400">
+            What service do you need?
+          </span>
         </Link>
       </div>
 
@@ -193,7 +192,9 @@ export function Home() {
         {/* Service Categories - Horizontal Scroll */}
         <div className="mb-6">
           <div className="px-5 mb-2 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">Our Services</h2>
+            <h2 className="text-lg font-semibold text-gray-800">
+              Our Services
+            </h2>
             <Link to="/services" className="text-blue-600 text-sm font-medium">
               See All
             </Link>
@@ -214,10 +215,14 @@ export function Home() {
                     to={`/service/${service.id}`}
                     className="flex-shrink-0 w-32 bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
                   >
-                    <div className={`w-12 h-12 ${service.color} rounded-2xl flex items-center justify-center mb-2`}>
+                    <div
+                      className={`w-12 h-12 ${service.color} rounded-2xl flex items-center justify-center mb-2`}
+                    >
                       <Icon className="w-6 h-6" />
                     </div>
-                    <h3 className="text-gray-800 font-medium text-sm">{service.name}</h3>
+                    <h3 className="text-gray-800 font-medium text-sm">
+                      {service.name}
+                    </h3>
                     <p className="text-gray-500 text-xs mt-0.5">Professional</p>
                   </Link>
                 );
@@ -229,51 +234,63 @@ export function Home() {
         {/* Advertisement Carousel */}
         <div className="mb-6">
           <div className="px-5 mb-2 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">Advertisements</h2>
+            <h2 className="text-lg font-semibold text-gray-800">
+              Advertisements
+            </h2>
           </div>
           <div className="px-5">
-          <Slider {...carouselSettings}>
-            {isLoadingAds && (
-              <div className="text-sm text-gray-500">Loading advertisements...</div>
-            )}
-            {!isLoadingAds && adsError && (
-              <div className="text-sm text-red-500">{adsError}</div>
-            )}
-            {!isLoadingAds && !adsError && advertisements.map((ad) => (
-              <div key={ad.id}>
-                <div className={`bg-gradient-to-r ${ad.bgColor} rounded-2xl p-5 shadow-md overflow-hidden relative h-40`}>
-                  <div className="relative z-10 flex flex-col justify-between h-full">
-                    <div>
-                      <div className="inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full mb-2">
-                        LIMITED TIME
-                      </div>
-                      <h3 className="text-white font-semibold text-xl mb-1">{ad.title}</h3>
-                      <p className="text-white/90 text-sm">{ad.subtitle}</p>
-                    </div>
-                    <button className="bg-white text-blue-600 mt-2 px-3 py-2 rounded-full text-sm font-medium hover:bg-blue-50 transition-colors w-fit">
-                      Claim Now
-                    </button>
-                  </div>
-                  {ad.image && (
-                    <div
-                      className="absolute right-0 top-0 w-1/2 h-full opacity-20"
-                      style={{
-                        backgroundImage: `url(${ad.image})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                      }}
-                    />
-                  )}
+            <Slider {...carouselSettings}>
+              {isLoadingAds && (
+                <div className="text-sm text-gray-500">
+                  Loading advertisements...
                 </div>
-              </div>
-            ))}
-          </Slider>
+              )}
+              {!isLoadingAds && adsError && (
+                <div className="text-sm text-red-500">{adsError}</div>
+              )}
+              {!isLoadingAds &&
+                !adsError &&
+                advertisements.map((ad) => (
+                  <div key={ad.id}>
+                    <div
+                      className={`bg-gradient-to-r ${ad.bgColor} rounded-2xl p-5 shadow-md overflow-hidden relative h-40`}
+                    >
+                      <div className="relative z-10 flex flex-col justify-between h-full">
+                        <div>
+                          <div className="inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full mb-2">
+                            LIMITED TIME
+                          </div>
+                          <h3 className="text-white font-semibold text-xl mb-1">
+                            {ad.title}
+                          </h3>
+                          <p className="text-white/90 text-sm">{ad.subtitle}</p>
+                        </div>
+                        <button className="bg-white text-blue-600 mt-2 px-3 py-2 rounded-full text-sm font-medium hover:bg-blue-50 transition-colors w-fit">
+                          Claim Now
+                        </button>
+                      </div>
+                      {ad.image && (
+                        <div
+                          className="absolute right-0 top-0 w-1/2 h-full opacity-20"
+                          style={{
+                            backgroundImage: `url(${ad.image})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </Slider>
           </div>
         </div>
 
         {/* Footer Services Section */}
         <div className="px-5">
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">Popular Services</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">
+            Popular Services
+          </h2>
           <div className="grid grid-cols-2 gap-4">
             {filteredServices.slice(0, 4).map((service) => {
               const Icon = service.icon;
@@ -283,11 +300,15 @@ export function Home() {
                   to={`/service/${service.id}`}
                   className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className={`w-14 h-14 ${service.color} rounded-2xl flex items-center justify-center mb-3`}>
+                  <div
+                    className={`w-14 h-14 ${service.color} rounded-2xl flex items-center justify-center mb-3`}
+                  >
                     <Icon className="w-7 h-7" />
                   </div>
                   <h3 className="text-gray-800 font-medium">{service.name}</h3>
-                  <p className="text-gray-500 text-xs mt-1">Starting at 15,000 MMK</p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    Starting at 15,000 MMK
+                  </p>
                 </Link>
               );
             })}
