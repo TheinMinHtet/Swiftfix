@@ -4,10 +4,25 @@ import { Link } from "react-router-dom";
 import { getOrders } from "../../../api/orders-api";
 import { getReviews } from "../../../api/reviews-api";
 
-const filters = ["all", "pending", "confirmed", "completed"];
+const filters = ["all", "pending", "confirmed", "completed", "cancelled"];
+
+const normalizeOrderStatus = (value, expiresAt) => {
+  const status = (value || "").toString().trim().toLowerCase();
+  if (status === "pending" && expiresAt) {
+    const expiryTime = new Date(expiresAt).getTime();
+    if (!Number.isNaN(expiryTime) && Date.now() > expiryTime) {
+      return "cancelled";
+    }
+  }
+  if (status === "cancel" || status === "canceled" || status === "rejected") {
+    return "cancelled";
+  }
+  return status || "pending";
+};
 
 const getStatusLabel = (status) => {
   if (status === "confirmed") return "On the Way";
+  if (status === "cancelled") return "Cancelled";
   return status;
 };
 
@@ -115,7 +130,10 @@ export function Orders() {
               serviceId: order.Mini_Shin__serviceId__CST || order.serviceId || "",
               date: order.Mini_Shin__dateLabel__CST || order.dateLabel || "",
               time: order.Mini_Shin__timeLabel__CST || order.timeLabel || "",
-              status: (order.Mini_Shin__status__CST || order.status || "pending").toLowerCase(),
+              status: normalizeOrderStatus(
+                order.Mini_Shin__status__CST || order.status,
+                order.Mini_Shin__expiresAt__CST || order.expiresAt
+              ),
               amountMMK: order.Mini_Shin__amountMMK__CST ?? order.amountMMK ?? 0,
             };
           });
@@ -169,6 +187,7 @@ export function Orders() {
       case "completed":
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case "rejected":
+      case "cancelled":
         return <XCircle className="w-5 h-5 text-red-600" />;
       default:
         return null;
@@ -184,6 +203,7 @@ export function Orders() {
       case "completed":
         return "bg-green-100 text-green-700";
       case "rejected":
+      case "cancelled":
         return "bg-red-100 text-red-700";
       default:
         return "bg-gray-100 text-gray-700";

@@ -7,6 +7,7 @@ export type OrderApiItem = {
     Mini_Shin__dateLabel__CST?: string;
     Mini_Shin__timeLabel__CST?: string;
     Mini_Shin__status__CST?: string;
+    Mini_Shin__expiresAt__CST?: string;
     Mini_Shin__amountMMK__CST?: number;
     id?: string;
     serviceId?: string;
@@ -14,6 +15,7 @@ export type OrderApiItem = {
     dateLabel?: string;
     timeLabel?: string;
     status?: string;
+    expiresAt?: string;
     amountMMK?: number;
 };
 
@@ -59,6 +61,7 @@ export type CreateOrderInput = {
     redeemedPoints?: number;
     discountMMK?: number;
     phoneNumber: string;
+    expiresAt?: string;
 };
 
 export const createOrder = async (input: CreateOrderInput) => {

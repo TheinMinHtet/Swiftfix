@@ -23,6 +23,11 @@ const padNumber = (value) => value.toString().padStart(2, "0");
 const formatLocalDateInput = (date) =>
   `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
 
+const getPendingExpiryIso = () => {
+  const expiry = new Date(Date.now() + 15 * 60 * 1000);
+  return expiry.toISOString();
+};
+
 const parseTimeSlot = (timeLabel) => {
   const timeMatch = (timeLabel || "").match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   if (!timeMatch) return null;
@@ -63,7 +68,9 @@ export function Booking() {
   const [addressTouched, setAddressTouched] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [phone, setPhone] = useState("");
+  const [draftPhone, setDraftPhone] = useState("");
   const [phoneTouched, setPhoneTouched] = useState(false);
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [userId, setUserId] = useState("");
   const [providers, setProviders] = useState([]);
   const [selectedRedeemPoints, setSelectedRedeemPoints] = useState(0);
@@ -147,6 +154,7 @@ export function Booking() {
         }
         if (!phoneTouched && defaultPhone) {
           setPhone(defaultPhone);
+          setDraftPhone(defaultPhone);
         }
       } catch (error) {
         console.error("Error fetching user info for address:", error);
@@ -183,13 +191,16 @@ export function Booking() {
   const isSelectedTimeInPast = isPastTimeSlotForDate(selectedDate, selectedTime);
   const hasAddressChanges = draftAddress.trim() !== address.trim();
   const addressNeedsConfirmation = isEditingAddress || hasAddressChanges;
+  const hasPhoneChanges = draftPhone.trim() !== phone.trim();
+  const phoneNeedsConfirmation = isEditingPhone || hasPhoneChanges;
   const isBookingInfoValid =
     selectedDate.trim() !== "" &&
     selectedTime.trim() !== "" &&
     !isSelectedTimeInPast &&
     address.trim() !== "" &&
     !addressNeedsConfirmation &&
-    phone.trim() !== "";
+    phone.trim() !== "" &&
+    !phoneNeedsConfirmation;
   const dateMissing = showRequiredError && selectedDate.trim() === "";
   const timeMissing =
     showRequiredError && (selectedTime.trim() === "" || isSelectedTimeInPast);
@@ -209,6 +220,12 @@ export function Booking() {
       setDraftAddress(address);
     }
   }, [address, isEditingAddress]);
+
+  useEffect(() => {
+    if (!isEditingPhone) {
+      setDraftPhone(phone);
+    }
+  }, [phone, isEditingPhone]);
 
   if (isLoadingService) {
     return (
@@ -297,6 +314,7 @@ export function Booking() {
       return;
     }
 
+    const expiresAt = getPendingExpiryIso();
     createOrder({
       userId,
       providerId,
@@ -308,6 +326,7 @@ export function Booking() {
       redeemedPoints: selectedRedeemPoints || 0,
       discountMMK: redeemDiscount || 0,
       phoneNumber: phone,
+      expiresAt,
     })
       .then((response) => {
         const orderIdFromApi =
@@ -316,7 +335,23 @@ export function Booking() {
           response?.result?.id ||
           response?.orderId ||
           "";
-        navigate(`/tracking/${orderIdFromApi || "ORD-NEW"}`);
+        navigate(`/tracking/${orderIdFromApi || "ORD-NEW"}`, {
+          state: {
+            bookingSummary: {
+              serviceName:
+                service?.Mini_Shin__serviceName__CST ||
+                service?.serviceName ||
+                service?.name ||
+                "Service",
+              date: selectedDate,
+              time: selectedTime,
+              address,
+              amountMMK: totalPayable,
+              expiresAt,
+              orderId: orderIdFromApi || "ORD-NEW",
+            },
+          },
+        });
       })
       .catch((error) => {
         console.error("Failed to create order:", error);
@@ -439,11 +474,13 @@ export function Booking() {
               <Pencil className="w-3.5 h-3.5" />
               Edit
             </button>
-            {isEditingAddress && hasAddressChanges && (
+            {isEditingAddress && (
               <button
                 type="button"
                 onClick={() => {
-                  setAddress(draftAddress);
+                  if (hasAddressChanges) {
+                    setAddress(draftAddress);
+                  }
                   setAddressTouched(true);
                   setIsEditingAddress(false);
                 }}
@@ -483,31 +520,68 @@ export function Booking() {
 
         {/* Phone Number */}
         <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-blue-600" />
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">Phone Number</h3>
+                <p className="text-xs text-gray-500">We will contact you if needed</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-800">Phone Number</h3>
-              <p className="text-xs text-gray-500">We will contact you if needed</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingPhone(true);
+                setDraftPhone(phone);
+                setPhoneTouched(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </button>
+            {isEditingPhone && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (hasPhoneChanges) {
+                    setPhone(draftPhone);
+                  }
+                  setPhoneTouched(true);
+                  setIsEditingPhone(false);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-100"
+              >
+                Confirm
+              </button>
+            )}
           </div>
           <input
             type="tel"
-            value={phone}
+            value={isEditingPhone ? draftPhone : phone}
             onChange={(e) => {
-              setPhone(e.target.value);
-              if (!phoneTouched) setPhoneTouched(true);
+              setDraftPhone(e.target.value);
             }}
             placeholder="Enter your phone number..."
+            readOnly={!isEditingPhone}
             className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 ${
               phoneMissing
                 ? "border-red-400 focus:ring-red-400"
                 : "border-gray-200 focus:ring-blue-500"
-            }`}
+            } ${!isEditingPhone ? "bg-gray-50 text-gray-500 cursor-default" : "bg-white text-gray-800"}`}
           />
+          {!isEditingPhone && phone.trim() !== "" && (
+            <p className="text-xs text-gray-500 mt-2">Tap Edit to change this phone number.</p>
+          )}
           {phoneMissing && (
             <p className="text-xs text-red-600 mt-2">Phone number is required.</p>
+          )}
+          {showRequiredError && phoneNeedsConfirmation && (
+            <p className="text-xs text-red-600 mt-2">
+              Please confirm your phone number changes before booking.
+            </p>
           )}
         </div>
 
@@ -606,7 +680,7 @@ export function Booking() {
         )}
         {showRequiredError && (
           <p className="text-sm text-red-600 mt-3">
-            Please fill Date, Time, Service Address, and Phone Number with a valid future booking time, and confirm any address changes before booking.
+            Please fill Date, Time, Service Address, and Phone Number with a valid future booking time, and confirm any address or phone changes before booking.
           </p>
         )}
       </div>

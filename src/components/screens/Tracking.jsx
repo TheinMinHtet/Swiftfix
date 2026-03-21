@@ -1,5 +1,5 @@
 import { ArrowLeft, Phone, Check, Truck } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { ImageWithFallback } from "../figma/ImageWithFallback.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { getOrders } from "../../../api/orders-api";
@@ -36,12 +36,21 @@ const parseTimeParts = (value) => {
   return null;
 };
 
+const formatCountdown = (remainingMs) => {
+  const totalSeconds = Math.max(Math.floor(remainingMs / 1000), 0);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+};
+
 export function Tracking() {
   const { orderId } = useParams();
+  const location = useLocation();
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [orderError, setOrderError] = useState("");
   const [provider, setProvider] = useState(null);
+  const [nowMs, setNowMs] = useState(Date.now());
   const normalizeServiceId = (value) => {
     return (value || "").toString().trim().toLowerCase();
   };
@@ -112,21 +121,79 @@ export function Tracking() {
   }, [order]);
 
   const status = (order?.Mini_Shin__status__CST || order?.status || "pending").toLowerCase();
+  const normalizedStatus =
+    status === "cancel" || status === "canceled" || status === "rejected" ? "cancelled" : status;
   const statusStep = (order?.Mini_Shin__statusStep__CST || order?.statusStep || "").toLowerCase();
+  const bookingSummary = location?.state?.bookingSummary || null;
+  const displayedServiceName =
+    order?.Mini_Shin__serviceName__CST ||
+    order?.service ||
+    bookingSummary?.serviceName ||
+    "Service";
+  const displayedDate =
+    order?.Mini_Shin__dateLabel__CST ||
+    order?.dateLabel ||
+    order?.Mini_Shin__date__CST ||
+    order?.date ||
+    bookingSummary?.date ||
+    "";
+  const displayedTime =
+    order?.Mini_Shin__timeLabel__CST ||
+    order?.timeLabel ||
+    order?.Mini_Shin__time__CST ||
+    order?.time ||
+    bookingSummary?.time ||
+    "";
+  const displayedAddress =
+    order?.Mini_Shin__address__CST ||
+    order?.address ||
+    bookingSummary?.address ||
+    "-";
+  const displayedAmount =
+    order?.Mini_Shin__amountMMK__CST ??
+    order?.amountMMK ??
+    bookingSummary?.amountMMK ??
+    0;
+  const displayedExpiresAt =
+    order?.Mini_Shin__expiresAt__CST ||
+    order?.expiresAt ||
+    bookingSummary?.expiresAt ||
+    "";
+  const expiryTimestamp = displayedExpiresAt ? new Date(displayedExpiresAt).getTime() : Number.NaN;
+  const remainingMs = Number.isNaN(expiryTimestamp) ? 0 : Math.max(expiryTimestamp - nowMs, 0);
+  const isExpiredPending =
+    normalizedStatus === "pending" &&
+    !Number.isNaN(expiryTimestamp) &&
+    nowMs > expiryTimestamp;
+  const effectiveStatus = isExpiredPending ? "cancelled" : normalizedStatus;
+  const isCancelledStatus = effectiveStatus === "cancelled";
+  const countdownText = formatCountdown(remainingMs);
+
+  useEffect(() => {
+    if (!displayedExpiresAt || normalizedStatus !== "pending") return;
+
+    setNowMs(Date.now());
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [displayedExpiresAt, normalizedStatus]);
+
   const currentStep = useMemo(() => {
-    if (status === "completed") return 2;
-    if (status === "confirmed") {
+    if (effectiveStatus === "completed") return 2;
+    if (effectiveStatus === "confirmed") {
       if (statusStep === "on_the_way") return 1;
       if (statusStep === "assigned") return 1;
       return 1;
     }
-    if (status === "rejected") return 0;
+    if (isCancelledStatus) return 0;
     return 0;
-  }, [status, statusStep]);
+  }, [effectiveStatus, statusStep, isCancelledStatus]);
 
   const orderStatuses = baseStatuses.map((item, index) => {
-    const isCompletedStep = status === "completed" ? index <= currentStep : index < currentStep;
-    const isCurrentStep = status === "completed" ? false : index === currentStep;
+    const isCompletedStep = effectiveStatus === "completed" ? index <= currentStep : index < currentStep;
+    const isCurrentStep = effectiveStatus === "completed" || isCancelledStatus ? false : index === currentStep;
 
     return {
       ...item,
@@ -135,9 +202,9 @@ export function Tracking() {
     };
   });
 
-  const showProvider = status === "confirmed";
-  const showEta = status === "confirmed" && currentStep >= 1;
-  const isPaidStatus = status === "confirmed" || status === "completed";
+  const showProvider = effectiveStatus === "confirmed";
+  const showEta = effectiveStatus === "confirmed" && currentStep >= 1;
+  const isPaidStatus = effectiveStatus === "confirmed" || effectiveStatus === "completed";
   const formatMMK = (amount) =>
     `${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`;
 
@@ -187,7 +254,7 @@ export function Tracking() {
         <div className="flex-1">
           <h1 className="text-lg font-semibold text-gray-800">Track Order</h1>
           <p className="text-xs text-gray-500">
-            {order?.Mini_Shin__orderId__CST || orderId}
+            {order?.Mini_Shin__orderId__CST || bookingSummary?.orderId || orderId}
           </p>
         </div>
       </div>
@@ -209,30 +276,30 @@ export function Tracking() {
           <div className="bg-white rounded-2xl p-5 shadow-sm mb-5">
           <h2 className="font-semibold text-gray-800 mb-5">Service Status</h2>
           <div className="space-y-5">
-            {orderStatuses.map((status, index) => (
-              <div key={status.id} className="flex gap-4">
+            {orderStatuses.map((timelineStatus, index) => (
+              <div key={timelineStatus.id} className="flex gap-4">
                 {/* Timeline Icon */}
                 <div className="flex flex-col items-center">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      status.completed
+                      timelineStatus.completed
                         ? "bg-blue-600"
-                        : status.current && index === 1
+                        : timelineStatus.current && index === 1
                         ? "bg-blue-600"
-                        : status.current
+                        : timelineStatus.current
                         ? "bg-blue-100 border-2 border-blue-600"
                         : "bg-gray-100"
                     }`}
                   >
-                    {status.completed ? (
+                    {timelineStatus.completed ? (
                       <Check className="w-5 h-5 text-white" />
                     ) : (
-                      status.current && index === 1 ? (
+                      timelineStatus.current && index === 1 ? (
                         <Check className="w-5 h-5 text-white" />
                       ) : (
                         <div
                           className={`w-3 h-3 rounded-full ${
-                            status.current ? "bg-blue-600" : "bg-gray-300"
+                            timelineStatus.current ? "bg-blue-600" : "bg-gray-300"
                           }`}
                         />
                       )
@@ -241,7 +308,7 @@ export function Tracking() {
                   {index < orderStatuses.length - 1 && (
                     <div
                       className={`w-0.5 h-12 ${
-                        status.completed ? "bg-blue-600" : "bg-gray-200"
+                        timelineStatus.completed ? "bg-blue-600" : "bg-gray-200"
                       }`}
                     />
                   )}
@@ -251,23 +318,23 @@ export function Tracking() {
                 <div className="flex-1 pb-4">
                   <h3
                     className={`font-semibold ${
-                      status.completed || status.current
+                      timelineStatus.completed || timelineStatus.current
                         ? "text-gray-800"
                         : "text-gray-400"
                     }`}
                   >
-                    {status.label}
+                    {timelineStatus.label}
                   </h3>
                   <p
                     className={`text-sm ${
-                      status.completed || status.current
+                      timelineStatus.completed || timelineStatus.current
                         ? "text-gray-600"
                         : "text-gray-400"
                     }`}
                   >
-                    {status.description}
+                    {timelineStatus.description}
                   </p>
-                  {status.current && status !== "rejected" && (
+                  {timelineStatus.current && !isCancelledStatus && (
                     <div className="mt-2 inline-block bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">
                       {index === 0
                         ? "Pending"
@@ -281,6 +348,25 @@ export function Tracking() {
             ))}
           </div>
         </div>
+        )}
+        {!isLoading && !orderError && isCancelledStatus && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm mb-5">
+            <p className="text-sm font-semibold text-red-700">Order Cancelled</p>
+            <p className="text-xs text-red-600 mt-1">
+              Payment was not confirmed within 15 minutes, so this order was cancelled automatically.
+            </p>
+          </div>
+        )}
+        {!isLoading && !orderError && effectiveStatus === "pending" && displayedExpiresAt && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm mb-5">
+            <p className="text-sm font-semibold text-amber-700">Awaiting Payment</p>
+            <p className="text-xs text-amber-600 mt-1">
+              Please complete payment before {new Date(displayedExpiresAt).toLocaleString()}.
+            </p>
+            <p className="text-sm font-semibold text-amber-800 mt-2">
+              Time left: {countdownText}
+            </p>
+          </div>
         )}
 
         {/* Provider Profile */}
@@ -323,28 +409,28 @@ export function Tracking() {
         )}
 
         {/* Service Details */}
-        {!isLoading && !orderError && order && (
+        {!isLoading && !orderError && (order || bookingSummary) && (
           <div className="bg-white rounded-2xl p-5 shadow-sm mb-5">
           <h2 className="font-semibold text-gray-800 mb-4">Service Details</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Service Type</span>
               <span className="text-sm font-medium text-gray-800">
-                {order.Mini_Shin__serviceName__CST || order.service || "Service"}
+                {displayedServiceName}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Date & Time</span>
               <span className="text-sm font-medium text-gray-800">
-                {(order.Mini_Shin__dateLabel__CST || order.dateLabel || "")}
-                {order.Mini_Shin__timeLabel__CST || order.timeLabel ? ", " : ""}
-                {(order.Mini_Shin__timeLabel__CST || order.timeLabel || "")}
+                {displayedDate}
+                {displayedTime ? ", " : ""}
+                {displayedTime}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Address</span>
               <span className="text-sm font-medium text-gray-800 text-right">
-                {order.Mini_Shin__address__CST || order.address || "-"}
+                {displayedAddress}
               </span>
             </div>
             <div className="h-px bg-gray-200 my-2" />
@@ -352,7 +438,7 @@ export function Tracking() {
               <span className="font-semibold text-gray-800">Total Amount</span>
               <div className="flex items-center gap-2">
                 <span className={`font-semibold ${isPaidStatus ? "text-green-600" : "text-blue-600"}`}>
-                  {formatMMK(order.Mini_Shin__amountMMK__CST ?? order.amountMMK)}
+                  {formatMMK(displayedAmount)}
                 </span>
                 {isPaidStatus && (
                   <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
