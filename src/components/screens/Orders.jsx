@@ -3,6 +3,7 @@ import { Clock, CheckCircle, XCircle, Star, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getOrders } from "../../../api/orders-api";
 import { getReviews } from "../../../api/reviews-api";
+import { useI18n } from "../../utils/i18n.js";
 
 const filters = ["all", "pending", "confirmed", "completed", "cancelled"];
 
@@ -18,12 +19,6 @@ const normalizeOrderStatus = (value, expiresAt) => {
     return "cancelled";
   }
   return status || "pending";
-};
-
-const getStatusLabel = (status) => {
-  if (status === "confirmed") return "On the Way";
-  if (status === "cancelled") return "Cancelled";
-  return status;
 };
 
 const parseTimeParts = (value) => {
@@ -101,15 +96,16 @@ const getOrderSortValue = (order) => {
 };
 
 export function Orders() {
+  const { t, localizeDigits } = useI18n();
   const [activeFilter, setActiveFilter] = useState("all");
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [ordersError, setOrdersError] = useState("");
   const [reviewedOrderIds, setReviewedOrderIds] = useState(new Set());
   const actionButtonClass =
-    "inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors";
+    "inline-flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/25";
   const secondaryActionButtonClass =
-    "inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors";
+    "inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600";
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -168,7 +164,7 @@ export function Orders() {
   }, []);
 
   const formatMMK = (amount) =>
-    `${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`;
+    localizeDigits(`${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`);
 
   const filteredOrders = useMemo(
     () =>
@@ -211,27 +207,27 @@ export function Orders() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white px-5 py-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-gray-800">My Orders</h1>
-        <p className="text-sm text-gray-500 mt-1">Track all your service bookings</p>
+    <div className="min-h-screen bg-gray-50 transition-colors dark:bg-slate-900">
+      <div className="bg-white px-5 py-6 shadow-sm transition-colors dark:bg-slate-900/95 dark:shadow-slate-950/30">
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-slate-100">{t("orders.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{t("orders.subtitle")}</p>
       </div>
 
       <div className="px-5 py-6">
-        <div className="flex gap-2 mb-5 overflow-x-auto scrollbar-hide">
+        <div className="mb-5 flex gap-2 overflow-x-auto scrollbar-hide">
           {filters.map((filter) => {
             const isActive = activeFilter === filter;
             return (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
-                className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition-colors ${
+                className={`inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-100"
+                    : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 }`}
               >
-                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                {t(`orders.filters.${filter}`)}
               </button>
             );
           })}
@@ -239,20 +235,20 @@ export function Orders() {
 
         <div className="space-y-4">
           {isLoading && (
-            <div className="bg-white rounded-2xl p-6 text-center text-gray-500 shadow-sm">
-              Loading orders...
+            <div className="rounded-2xl bg-white p-6 text-center text-gray-500 shadow-sm transition-colors dark:bg-slate-800 dark:text-slate-400 dark:shadow-slate-950/30">
+              {t("orders.loading")}
             </div>
           )}
           {!isLoading && ordersError && (
-            <div className="bg-white rounded-2xl p-6 text-center text-red-500 shadow-sm">
-              {ordersError}
+            <div className="rounded-2xl bg-white p-6 text-center text-red-500 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
+              {t("orders.error")}
             </div>
           )}
           {!isLoading && !ordersError && filteredOrders.length === 0 ? (
-            <div className="bg-white rounded-2xl p-6 text-center text-gray-500 shadow-sm">
+            <div className="rounded-2xl bg-white p-6 text-center text-gray-500 shadow-sm transition-colors dark:bg-slate-800 dark:text-slate-400 dark:shadow-slate-950/30">
               {activeFilter === "all"
-                ? "No orders found."
-                : `No ${activeFilter} orders found.`}
+                ? t("orders.noneAll")
+                : t("orders.noneByFilter", { filter: t(`orders.filters.${activeFilter}`).toLowerCase() })}
             </div>
           ) : (
             !isLoading &&
@@ -260,20 +256,20 @@ export function Orders() {
             filteredOrders.map((order) => (
               <div
                 key={order.id}
-                className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+                className="rounded-2xl bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-slate-800 dark:shadow-slate-950/30"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-gray-800 mb-1">{order.service}</h3>
-                    <p className="text-xs text-gray-500">Order #{order.orderNo || order.id}</p>
+                    <h3 className="mb-1 font-semibold text-gray-800 dark:text-slate-100">{order.service}</h3>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">{t("orders.orderId", { orderNo: order.orderNo || order.id })}</p>
                   </div>
                   <div className="flex items-center gap-2">{getStatusIcon(order.status)}</div>
                 </div>
 
-                <div className="flex items-center gap-4 mb-3 text-sm text-gray-600">
-                  <span>{order.date}</span>
+                <div className="mb-3 flex items-center gap-4 text-sm text-gray-600 dark:text-slate-300">
+                  <span>{localizeDigits(order.date)}</span>
                   <span>-</span>
-                  <span>{order.time}</span>
+                  <span>{localizeDigits(order.time)}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -282,9 +278,9 @@ export function Orders() {
                       order.status,
                     )}`}
                   >
-                    {getStatusLabel(order.status)}
+                    {t(`orders.status.${order.status}`)}
                   </span>
-                  <span className="font-semibold text-gray-800">{formatMMK(order.amountMMK)}</span>
+                  <span className="font-semibold text-gray-800 dark:text-slate-100">{formatMMK(order.amountMMK)}</span>
                 </div>
 
                 {order.status === "pending" && (
@@ -293,7 +289,7 @@ export function Orders() {
                       to={`/tracking/${order.orderNo || order.id}`}
                       className={actionButtonClass}
                     >
-                      View Pending Status
+                      {t("orders.action.viewPending")}
                     </Link>
                   </div>
                 )}
@@ -304,7 +300,7 @@ export function Orders() {
                       to={`/tracking/${order.orderNo || order.id}`}
                       className={actionButtonClass}
                     >
-                      Track Order
+                      {t("orders.action.track")}
                     </Link>
                   </div>
                 )}
@@ -315,7 +311,7 @@ export function Orders() {
                       to={`/tracking/${order.orderNo || order.id}`}
                       className={secondaryActionButtonClass}
                     >
-                      View Service
+                      {t("orders.action.viewService")}
                     </Link>
                     {!reviewedOrderIds.has(order.orderNo || order.id) && (
                       <Link
@@ -323,7 +319,7 @@ export function Orders() {
                         className={actionButtonClass}
                       >
                         <Star className="w-3.5 h-3.5 fill-blue-700 text-blue-700" />
-                        Write Review
+                        {t("orders.action.writeReview")}
                       </Link>
                     )}
                   </div>

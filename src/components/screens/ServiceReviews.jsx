@@ -78,30 +78,30 @@ export function ServiceReviews() {
   }, [id])
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="bg-white px-5 py-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm">
+    <div className="min-h-screen bg-gray-50 pb-20 transition-colors dark:bg-slate-900">
+      <div className="sticky top-0 z-10 flex items-center gap-4 bg-white px-5 py-4 shadow-sm transition-colors dark:bg-slate-900/95 dark:shadow-slate-950/30">
         <Link
           to={`/service/${id}`}
-          className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 transition-colors dark:bg-slate-800"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
+          <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-slate-200" />
         </Link>
         <div>
-          <h1 className="text-lg font-semibold text-gray-800">All Reviews</h1>
-          <p className="text-xs text-gray-500">{serviceName}</p>
+          <h1 className="text-lg font-semibold text-gray-800 dark:text-slate-100">All Reviews</h1>
+          <p className="text-xs text-gray-500 dark:text-slate-400">{serviceName}</p>
         </div>
       </div>
 
       <div className="px-5 py-6">
         <div className="space-y-4">
           {isLoading && (
-            <p className="text-sm text-gray-500">Loading reviews...</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Loading reviews...</p>
           )}
           {!isLoading && error && (
             <p className="text-sm text-red-500">{error}</p>
           )}
           {!isLoading && !error && reviews.map((review) => (
-            <div key={review.id} className="bg-white rounded-2xl p-5 shadow-sm">
+            <div key={review.id} className="rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -110,8 +110,8 @@ export function ServiceReviews() {
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">{review.name}</p>
-                    <p className="text-xs text-gray-500">{review.date}</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-slate-100">{review.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">{review.date}</p>
                   </div>
                 </div>
 
@@ -131,7 +131,7 @@ export function ServiceReviews() {
             </div>
           ))}
           {!isLoading && !error && reviews.length === 0 && (
-            <p className="text-sm text-gray-500">No reviews yet.</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">No reviews yet.</p>
           )}
         </div>
       </div>

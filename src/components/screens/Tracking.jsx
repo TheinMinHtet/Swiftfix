@@ -4,12 +4,7 @@ import { ImageWithFallback } from "../figma/ImageWithFallback.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { getOrders } from "../../../api/orders-api";
 import { getProviders } from "../../../api/providers-api";
-
-const baseStatuses = [
-  { id: 1, label: "Pending", description: "Your booking request has been submitted and is waiting for payment." },
-  { id: 2, label: "On the Way", description: "Payment received. Your provider is on the way to your location." },
-  { id: 3, label: "Completed", description: "The service has been completed successfully." },
-];
+import { useI18n } from "../../utils/i18n.js";
 
 const parseTimeParts = (value) => {
   const timeText = (value || "").toString().trim();
@@ -44,6 +39,7 @@ const formatCountdown = (remainingMs) => {
 };
 
 export function Tracking() {
+  const { t, localizeDigits } = useI18n();
   const { orderId } = useParams();
   const location = useLocation();
   const [order, setOrder] = useState(null);
@@ -70,14 +66,14 @@ export function Tracking() {
         setOrder(matched || null);
       } catch (error) {
         console.error("Error fetching order:", error);
-        setOrderError("Unable to load order details.");
+        setOrderError(t("tracking.error"));
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, t]);
 
   useEffect(() => {
     const fetchProvider = async () => {
@@ -168,6 +164,14 @@ export function Tracking() {
   const effectiveStatus = isExpiredPending ? "cancelled" : normalizedStatus;
   const isCancelledStatus = effectiveStatus === "cancelled";
   const countdownText = formatCountdown(remainingMs);
+  const baseStatuses = useMemo(
+    () => [
+      { id: 1, label: t("tracking.pending"), description: t("tracking.pendingDescription") },
+      { id: 2, label: t("tracking.onTheWay"), description: t("tracking.onTheWayDescription") },
+      { id: 3, label: t("tracking.completed"), description: t("tracking.completedDescription") },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     if (!displayedExpiresAt || normalizedStatus !== "pending") return;
@@ -206,7 +210,7 @@ export function Tracking() {
   const showEta = effectiveStatus === "confirmed" && currentStep >= 1;
   const isPaidStatus = effectiveStatus === "confirmed" || effectiveStatus === "completed";
   const formatMMK = (amount) =>
-    `${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`;
+    localizeDigits(`${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`);
 
   const etaText = useMemo(() => {
     const date =
@@ -219,10 +223,10 @@ export function Tracking() {
       order?.time ||
       order?.Mini_Shin__timeLabel__CST ||
       order?.timeLabel;
-    if (!date) return "ETA not available";
+    if (!date) return t("tracking.etaUnavailable");
 
     const scheduled = new Date(date);
-    if (Number.isNaN(scheduled.getTime())) return "ETA not available";
+    if (Number.isNaN(scheduled.getTime())) return t("tracking.etaUnavailable");
 
     const parsedTime = parseTimeParts(time);
     if (parsedTime) {
@@ -232,49 +236,51 @@ export function Tracking() {
     }
 
     const diffMs = scheduled.getTime() - Date.now();
-    if (diffMs <= 0) return "Arriving now";
+    if (diffMs <= 0) return t("tracking.arrivingNow");
     const diffMinutes = Math.ceil(diffMs / 60000);
-    if (diffMinutes < 60) return `${diffMinutes} mins`;
+    if (diffMinutes < 60) return t("tracking.mins", { value: diffMinutes });
     const diffHours = Math.floor(diffMinutes / 60);
     const remMinutes = diffMinutes % 60;
     if (diffHours < 24) {
-      return remMinutes > 0 ? `${diffHours}h ${remMinutes}m` : `${diffHours}h`;
+      return remMinutes > 0
+        ? t("tracking.hoursMins", { hours: diffHours, minutes: remMinutes })
+        : t("tracking.hours", { hours: diffHours });
     }
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} day${diffDays > 1 ? "s" : ""}`;
-  }, [order]);
+    return t("tracking.days", { days: diffDays });
+  }, [order, t]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 transition-colors dark:bg-slate-900">
       {/* Header */}
-      <div className="bg-white px-5 py-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm">
-        <Link to="/" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
+      <div className="sticky top-0 z-10 flex items-center gap-4 bg-white px-5 py-4 shadow-sm transition-colors dark:bg-slate-900/95 dark:shadow-slate-950/30">
+        <Link to="/" className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 transition-colors dark:bg-slate-800">
+          <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-slate-200" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-lg font-semibold text-gray-800">Track Order</h1>
-          <p className="text-xs text-gray-500">
-            {order?.Mini_Shin__orderId__CST || bookingSummary?.orderId || orderId}
+          <h1 className="text-lg font-semibold text-gray-800 dark:text-slate-100">{t("tracking.title")}</h1>
+          <p className="text-xs text-gray-500 dark:text-slate-400">
+            {localizeDigits(order?.Mini_Shin__orderId__CST || bookingSummary?.orderId || orderId)}
           </p>
         </div>
       </div>
 
       <div className="px-5 py-6">
         {isLoading && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm mb-5 text-gray-600">
-            Loading order...
+          <div className="mb-5 rounded-2xl bg-white p-5 text-gray-600 shadow-sm transition-colors dark:bg-slate-800 dark:text-slate-300 dark:shadow-slate-950/30">
+            {t("tracking.loading")}
           </div>
         )}
         {!isLoading && orderError && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm mb-5 text-red-600">
+          <div className="mb-5 rounded-2xl bg-white p-5 text-red-600 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
             {orderError}
           </div>
         )}
 
         {/* Status Timeline */}
         {!isLoading && !orderError && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm mb-5">
-          <h2 className="font-semibold text-gray-800 mb-5">Service Status</h2>
+          <div className="mb-5 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
+          <h2 className="mb-5 font-semibold text-gray-800 dark:text-slate-100">{t("tracking.serviceStatus")}</h2>
           <div className="space-y-5">
             {orderStatuses.map((timelineStatus, index) => (
               <div key={timelineStatus.id} className="flex gap-4">
@@ -288,7 +294,7 @@ export function Tracking() {
                         ? "bg-blue-600"
                         : timelineStatus.current
                         ? "bg-blue-100 border-2 border-blue-600"
-                        : "bg-gray-100"
+                        : "bg-gray-100 dark:bg-slate-700"
                     }`}
                   >
                     {timelineStatus.completed ? (
@@ -299,7 +305,7 @@ export function Tracking() {
                       ) : (
                         <div
                           className={`w-3 h-3 rounded-full ${
-                            timelineStatus.current ? "bg-blue-600" : "bg-gray-300"
+                            timelineStatus.current ? "bg-blue-600" : "bg-gray-300 dark:bg-slate-500"
                           }`}
                         />
                       )
@@ -308,7 +314,7 @@ export function Tracking() {
                   {index < orderStatuses.length - 1 && (
                     <div
                       className={`w-0.5 h-12 ${
-                        timelineStatus.completed ? "bg-blue-600" : "bg-gray-200"
+                        timelineStatus.completed ? "bg-blue-600" : "bg-gray-200 dark:bg-slate-700"
                       }`}
                     />
                   )}
@@ -319,8 +325,8 @@ export function Tracking() {
                   <h3
                     className={`font-semibold ${
                       timelineStatus.completed || timelineStatus.current
-                        ? "text-gray-800"
-                        : "text-gray-400"
+                        ? "text-gray-800 dark:text-slate-100"
+                        : "text-gray-400 dark:text-slate-500"
                     }`}
                   >
                     {timelineStatus.label}
@@ -328,8 +334,8 @@ export function Tracking() {
                   <p
                     className={`text-sm ${
                       timelineStatus.completed || timelineStatus.current
-                        ? "text-gray-600"
-                        : "text-gray-400"
+                        ? "text-gray-600 dark:text-slate-300"
+                        : "text-gray-400 dark:text-slate-500"
                     }`}
                   >
                     {timelineStatus.description}
@@ -337,10 +343,10 @@ export function Tracking() {
                   {timelineStatus.current && !isCancelledStatus && (
                     <div className="mt-2 inline-block bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">
                       {index === 0
-                        ? "Pending"
+                        ? t("tracking.pending")
                         : index === 1
-                        ? "On the Way"
-                        : "Completed"}
+                        ? t("tracking.onTheWay")
+                        : t("tracking.completed")}
                     </div>
                   )}
                 </div>
@@ -351,28 +357,28 @@ export function Tracking() {
         )}
         {!isLoading && !orderError && isCancelledStatus && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm mb-5">
-            <p className="text-sm font-semibold text-red-700">Order Cancelled</p>
+            <p className="text-sm font-semibold text-red-700">{t("tracking.cancelledTitle")}</p>
             <p className="text-xs text-red-600 mt-1">
-              Payment was not confirmed within 15 minutes, so this order was cancelled automatically.
+              {t("tracking.cancelledBody")}
             </p>
           </div>
         )}
         {!isLoading && !orderError && effectiveStatus === "pending" && displayedExpiresAt && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm mb-5">
-            <p className="text-sm font-semibold text-amber-700">Awaiting Payment</p>
+            <p className="text-sm font-semibold text-amber-700">{t("tracking.awaitingPayment")}</p>
             <p className="text-xs text-amber-600 mt-1">
-              Please complete payment before {new Date(displayedExpiresAt).toLocaleString()}.
+              {t("tracking.completePaymentBefore", { time: new Date(displayedExpiresAt).toLocaleString() })}
             </p>
             <p className="text-sm font-semibold text-amber-800 mt-2">
-              Time left: {countdownText}
+              {t("tracking.timeLeft", { time: countdownText })}
             </p>
           </div>
         )}
 
         {/* Provider Profile */}
         {showProvider && !isLoading && !orderError && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm mb-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Service Provider</h2>
+          <div className="mb-5 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
+          <h2 className="mb-4 font-semibold text-gray-800 dark:text-slate-100">{t("tracking.serviceProvider")}</h2>
           <div className="flex items-center gap-4 mb-4">
             <div className="relative">
               <ImageWithFallback
@@ -380,17 +386,17 @@ export function Tracking() {
                 alt="Provider"
                 className="w-16 h-16 rounded-full object-cover"
               />
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full" />
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white bg-green-500 dark:border-slate-800" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-800">
-                {provider?.Mini_Shin__name__CST || "Provider"}
+              <h3 className="font-semibold text-gray-800 dark:text-slate-100">
+                {provider?.Mini_Shin__name__CST || t("tracking.provider")}
               </h3>
-              <p className="text-sm text-gray-500">
-                {provider?.Mini_Shin__specialty__CST || "Service Provider"}
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                {provider?.Mini_Shin__specialty__CST || t("tracking.providerRole")}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Experience: {provider?.Mini_Shin__experience__CST ?? "N/A"}
+              <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                {t("tracking.experience", { value: provider?.Mini_Shin__experience__CST ?? "N/A" })}
               </p>
             </div>
           </div>
@@ -402,7 +408,7 @@ export function Tracking() {
   className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors"
 >
   <Phone className="w-5 h-5" />
-  <span className="font-medium">Call</span>
+  <span className="font-medium">{t("tracking.call")}</span>
 </button>
           </div>
         </div>
@@ -410,39 +416,39 @@ export function Tracking() {
 
         {/* Service Details */}
         {!isLoading && !orderError && (order || bookingSummary) && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm mb-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Service Details</h2>
+          <div className="mb-5 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
+          <h2 className="mb-4 font-semibold text-gray-800 dark:text-slate-100">{t("tracking.serviceDetails")}</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Service Type</span>
-              <span className="text-sm font-medium text-gray-800">
+              <span className="text-sm text-gray-600 dark:text-slate-300">{t("tracking.serviceType")}</span>
+              <span className="text-sm font-medium text-gray-800 dark:text-slate-100">
                 {displayedServiceName}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Date & Time</span>
-              <span className="text-sm font-medium text-gray-800">
-                {displayedDate}
+              <span className="text-sm text-gray-600 dark:text-slate-300">{t("tracking.dateTime")}</span>
+              <span className="text-sm font-medium text-gray-800 dark:text-slate-100">
+                {localizeDigits(displayedDate)}
                 {displayedTime ? ", " : ""}
-                {displayedTime}
+                {localizeDigits(displayedTime)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Address</span>
-              <span className="text-sm font-medium text-gray-800 text-right">
-                {displayedAddress}
+              <span className="text-sm text-gray-600 dark:text-slate-300">{t("tracking.address")}</span>
+              <span className="text-right text-sm font-medium text-gray-800 dark:text-slate-100">
+                {localizeDigits(displayedAddress)}
               </span>
             </div>
-            <div className="h-px bg-gray-200 my-2" />
+            <div className="my-2 h-px bg-gray-200 dark:bg-slate-700" />
             <div className="flex justify-between">
-              <span className="font-semibold text-gray-800">Total Amount</span>
+              <span className="font-semibold text-gray-800 dark:text-slate-100">{t("tracking.totalAmount")}</span>
               <div className="flex items-center gap-2">
                 <span className={`font-semibold ${isPaidStatus ? "text-green-600" : "text-blue-600"}`}>
                   {formatMMK(displayedAmount)}
                 </span>
                 {isPaidStatus && (
                   <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                    Paid
+                    {t("tracking.paid")}
                   </span>
                 )}
               </div>
@@ -455,9 +461,9 @@ export function Tracking() {
         {showEta && (
           <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-2xl p-5 shadow-md">
             <div className="text-center">
-              <p className="text-blue-100 text-sm mb-2">Estimated Arrival</p>
+              <p className="text-blue-100 text-sm mb-2">{t("tracking.estimatedArrival")}</p>
               <p className="text-white text-3xl font-bold mb-1">{etaText}</p>
-              <p className="text-blue-100 text-sm">Provider is on the way to your location</p>
+              <p className="text-blue-100 text-sm">{t("tracking.onWayToLocation")}</p>
             </div>
           </div>
         )}

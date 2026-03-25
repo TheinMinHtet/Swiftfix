@@ -1,10 +1,11 @@
-import { ArrowLeft, Calendar, Clock, MapPin, Upload, CreditCard, Pencil } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, CreditCard, Pencil, Phone, LocateFixed } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getServices } from "../../../api/services-api";
 import { getUsers } from "../../../api/user-api";
 import { createOrder } from "../../../api/orders-api";
 import { getProviders } from "../../../api/providers-api";
+import { useI18n } from "../../utils/i18n.js";
 
 // Map points to the exact discount amounts from your Points system
 const discountMap = {
@@ -26,6 +27,45 @@ const formatLocalDateInput = (date) =>
 const getPendingExpiryIso = () => {
   const expiry = new Date(Date.now() + 15 * 60 * 1000);
   return expiry.toISOString();
+};
+
+const formatCoordinates = (latitude, longitude) =>
+  `${Number(latitude).toFixed(6)}, ${Number(longitude).toFixed(6)}`;
+
+const getGeolocationErrorMessage = (error) => {
+  switch (error?.code) {
+    case 1:
+      return "booking.gpsDenied";
+    case 2:
+      return "booking.gpsUnavailable";
+    case 3:
+      return "booking.gpsTimeout";
+    default:
+      return "booking.gpsFailed";
+  }
+};
+
+const formatReverseGeocodedAddress = (addressParts) => {
+  if (!addressParts) return "";
+
+  const orderedParts = [
+    addressParts.house_number,
+    addressParts.road,
+    addressParts.neighbourhood,
+    addressParts.suburb,
+    addressParts.city_district,
+    addressParts.town,
+    addressParts.village,
+    addressParts.city,
+    addressParts.municipality,
+    addressParts.county,
+    addressParts.state,
+    addressParts.country,
+  ]
+    .filter(Boolean)
+    .filter((part, index, array) => array.indexOf(part) === index);
+
+  return orderedParts.join(", ");
 };
 
 const parseTimeSlot = (timeLabel) => {
@@ -56,6 +96,7 @@ const isPastTimeSlotForDate = (dateValue, timeLabel) => {
 };
 
 export function Booking() {
+  const { t, localizeDigits } = useI18n();
   const { id } = useParams();
   const navigate = useNavigate();
   const [service, setService] = useState(null);
@@ -72,11 +113,14 @@ export function Booking() {
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [userId, setUserId] = useState("");
+  const [currentPoints, setCurrentPoints] = useState(0);
   const [providers, setProviders] = useState([]);
   const [selectedRedeemPoints, setSelectedRedeemPoints] = useState(0);
   const [showRequiredError, setShowRequiredError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationError, setLocationError] = useState("");
   const today = useMemo(() => formatLocalDateInput(new Date()), []);
   const addressInputRef = useRef(null);
 
@@ -138,19 +182,25 @@ export function Booking() {
         const defaultAddress =
           firstUser?.Mini_Shin__address__CST ||
           firstUser?.address ||
-          [firstUser?.Mini_Shin__township__CST || firstUser?.township, firstUser?.Mini_Shin__city__CST || firstUser?.city]
-            .filter(Boolean)
-            .join(", ");
+          "";
         const defaultPhone =
           firstUser?.Mini_Shin__phone__CST ||
           firstUser?.phone ||
           "";
+        const userPoints =
+          firstUser?.Mini_Shin__points__CST ??
+          firstUser?.points ??
+          0;
         if (!userId && resolvedUserId) {
           setUserId(resolvedUserId);
         }
+        setCurrentPoints(userPoints);
         if (!addressTouched && defaultAddress) {
           setAddress(defaultAddress);
           setDraftAddress(defaultAddress);
+        }
+        if (!addressTouched && !defaultAddress) {
+          setIsEditingAddress(true);
         }
         if (!phoneTouched && defaultPhone) {
           setPhone(defaultPhone);
@@ -158,6 +208,7 @@ export function Booking() {
         }
       } catch (error) {
         console.error("Error fetching user info for address:", error);
+        setCurrentPoints(0);
         if (!userId) {
           setUserId("USR-1001");
         }
@@ -167,7 +218,6 @@ export function Booking() {
     fetchUserAddress();
   }, [addressTouched, phoneTouched, userId]);
 
-  const currentPoints = 1250;
   //const pointsToKyats = 30; // 100 points = 3,000 Ks
   const baseAmount =
     service?.Mini_Shin__baseAmount__CST ??
@@ -207,7 +257,7 @@ export function Booking() {
   const addressMissing = showRequiredError && address.trim() === "";
   const phoneMissing = showRequiredError && phone.trim() === "";
   const formatMMK = (amount) =>
-    `${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`;
+    localizeDigits(`${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`);
 
   useEffect(() => {
     if (selectedTime && isPastTimeSlotForDate(selectedDate, selectedTime)) {
@@ -229,23 +279,23 @@ export function Booking() {
 
   if (isLoadingService) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5">
-        <p className="text-gray-600">Loading booking...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5 dark:bg-slate-900">
+        <p className="text-gray-600 dark:text-slate-300">{t("booking.loading")}</p>
       </div>
     );
   }
 
   if (serviceError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5 dark:bg-slate-900">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-800 mb-2">Something went wrong</h1>
-          <p className="text-gray-600 mb-4">{serviceError}</p>
+          <h1 className="mb-2 text-xl font-semibold text-gray-800 dark:text-slate-100">{t("common.somethingWentWrong")}</h1>
+          <p className="mb-4 text-gray-600 dark:text-slate-300">{serviceError}</p>
           <Link
             to="/"
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
           >
-            Go Back Home
+            {t("common.goBackHome")}
           </Link>
         </div>
       </div>
@@ -255,15 +305,15 @@ export function Booking() {
   // Fallback in case service is not found
   if (!service) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5 dark:bg-slate-900">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-800 mb-2">Service Not Found</h1>
-          <p className="text-gray-600 mb-4">The service you're trying to book doesn't exist.</p>
+          <h1 className="mb-2 text-xl font-semibold text-gray-800 dark:text-slate-100">{t("booking.serviceNotFound")}</h1>
+          <p className="mb-4 text-gray-600 dark:text-slate-300">{t("booking.serviceNotFoundBody")}</p>
           <Link
             to="/"
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
           >
-            Go Back Home
+            {t("common.goBackHome")}
           </Link>
         </div>
       </div>
@@ -310,7 +360,7 @@ export function Booking() {
 
     if (!userId || !providerId || !serviceId) {
       setIsSubmitting(false);
-      setSubmitError("Missing user, provider, or service information.");
+      setSubmitError(t("booking.missingInfo"));
       return;
     }
 
@@ -355,39 +405,102 @@ export function Booking() {
       })
       .catch((error) => {
         console.error("Failed to create order:", error);
-        setSubmitError("Failed to create order. Please try again.");
+        setSubmitError(t("booking.failedCreate"));
       })
       .finally(() => setIsSubmitting(false));
   };
 
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError(t("booking.gpsUnsupported"));
+      return;
+    }
+
+    setIsDetectingLocation(true);
+    setLocationError("");
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        const roundedAccuracy = Number.isFinite(accuracy) ? Math.round(accuracy) : null;
+        const gpsFallback = t("booking.currentGps", {
+          coordinates: formatCoordinates(latitude, longitude),
+          accuracy: roundedAccuracy,
+        });
+
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+            {
+              headers: {
+                Accept: "application/json",
+              },
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error(`Reverse geocoding failed with status ${response.status}`);
+          }
+
+          const result = await response.json();
+          const readableAddress =
+            formatReverseGeocodedAddress(result?.address) ||
+            result?.display_name ||
+            gpsFallback;
+
+          setAddress(readableAddress);
+          setDraftAddress(readableAddress);
+        } catch (error) {
+          console.error("Failed to reverse geocode current location:", error);
+          setAddress(gpsFallback);
+          setDraftAddress(gpsFallback);
+        } finally {
+          setAddressTouched(true);
+          setIsEditingAddress(false);
+          setShowRequiredError(false);
+          setIsDetectingLocation(false);
+        }
+      },
+      (error) => {
+        setLocationError(t(getGeolocationErrorMessage(error)));
+        setIsDetectingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      },
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 transition-colors dark:bg-slate-900">
       {/* Header */}
-      <div className="bg-white px-5 py-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm">
-        <Link to={`/service/${id}`} className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
+      <div className="sticky top-0 z-10 flex items-center gap-4 bg-white px-5 py-4 shadow-sm transition-colors dark:bg-slate-900/95 dark:shadow-slate-950/30">
+        <Link to={`/service/${id}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 transition-colors dark:bg-slate-800">
+          <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-slate-200" />
         </Link>
-        <h1 className="text-lg font-semibold text-gray-800">Book Service</h1>
+        <h1 className="text-lg font-semibold text-gray-800 dark:text-slate-100">{t("booking.title")}</h1>
       </div>
 
       <div className="px-5 py-6">
         {/* Service Summary */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-5">
-          <h2 className="text-lg font-semibold text-gray-800 mb-1">
+        <div className="mb-5 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
+          <h2 className="mb-1 text-lg font-semibold text-gray-800 dark:text-slate-100">
             {service?.Mini_Shin__serviceName__CST || service?.serviceName || service?.name}
           </h2>
-          <p className="text-sm text-gray-500">Professional service at your doorstep</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400">{t("booking.serviceSummary")}</p>
         </div>
 
         {/* Date Picker */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
+        <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
               <Calendar className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-800">Select Date</h3>
-              <p className="text-xs text-gray-500">Choose your preferred date</p>
+              <h3 className="font-semibold text-gray-800 dark:text-slate-100">{t("booking.selectDate")}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400">{t("booking.chooseDate")}</p>
             </div>
           </div>
           <input
@@ -402,19 +515,19 @@ export function Booking() {
             min={today}
           />
           {dateMissing && (
-            <p className="text-xs text-red-600 mt-2">Date is required.</p>
+            <p className="text-xs text-red-600 mt-2">{t("booking.dateRequired")}</p>
           )}
         </div>
 
         {/* Time Picker */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
+        <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
               <Clock className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-800">Select Time</h3>
-              <p className="text-xs text-gray-500">Choose your preferred time slot</p>
+              <h3 className="font-semibold text-gray-800 dark:text-slate-100">{t("booking.selectTime")}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400">{t("booking.chooseTime")}</p>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -427,68 +540,51 @@ export function Booking() {
                   selectedTime === time
                     ? "bg-blue-600 text-white"
                     : availableTimeSlots.includes(time)
-                    ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+                    ? "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
+                    : "cursor-not-allowed bg-gray-100 text-gray-400 opacity-60 dark:bg-slate-700 dark:text-slate-500"
                 }`}
               >
-                {time}
+                {localizeDigits(time)}
               </button>
             ))}
           </div>
           {timeMissing && (
             <p className="text-xs text-red-600 mt-2">
               {selectedTime.trim() !== "" && isSelectedTimeInPast
-                ? "Please choose a future time slot."
-                : "Time is required."}
+                ? t("booking.futureTime")
+                : t("booking.timeRequired")}
             </p>
           )}
           {selectedDate === today && availableTimeSlots.length === 0 && (
             <p className="text-xs text-amber-600 mt-2">
-              No time slots are available for today. Please choose another date.
+              {t("booking.noSlotsToday")}
             </p>
           )}
         </div>
 
         {/* Address Input */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
+          <div className="mb-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                 <MapPin className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800">Service Address</h3>
-                <p className="text-xs text-gray-500">Where should we come?</p>
+                <h3 className="font-semibold text-gray-800 dark:text-slate-100">{t("booking.serviceAddress")}</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{t("booking.whereCome")}</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setIsEditingAddress(true);
-                setDraftAddress(address);
-                setAddressTouched(true);
-                setTimeout(() => addressInputRef.current?.focus(), 0);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              Edit
-            </button>
-            {isEditingAddress && (
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
-                onClick={() => {
-                  if (hasAddressChanges) {
-                    setAddress(draftAddress);
-                  }
-                  setAddressTouched(true);
-                  setIsEditingAddress(false);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-100"
+                onClick={handleUseCurrentLocation}
+                disabled={isDetectingLocation}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Confirm
+                <LocateFixed className="w-3.5 h-3.5" />
+                {isDetectingLocation ? t("booking.locating") : t("booking.useCurrentLocation")}
               </button>
-            )}
+            </div>
           </div>
           <textarea
             ref={addressInputRef}
@@ -496,38 +592,75 @@ export function Booking() {
             onChange={(e) => {
               setDraftAddress(e.target.value);
             }}
-            placeholder="Enter your full address..."
+            placeholder={t("booking.enterAddress")}
             readOnly={!isEditingAddress}
             className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 resize-none ${
               addressMissing
                 ? "border-red-400 focus:ring-red-400"
                 : "border-gray-200 focus:ring-blue-500"
-            } ${!isEditingAddress ? "bg-gray-50 text-gray-500 cursor-default" : "bg-white text-gray-800"}`}
+            } ${!isEditingAddress ? "cursor-default bg-gray-50 text-gray-500 dark:bg-slate-700 dark:text-slate-400" : "bg-white text-gray-800 dark:bg-slate-800 dark:text-slate-100"}`}
             rows={3}
           />
-          {!isEditingAddress && address.trim() !== "" && (
-            <p className="text-xs text-gray-500 mt-2">Tap Edit to change this location.</p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            {!isEditingAddress && address.trim() !== "" && (
+              <p className="text-xs text-gray-500 dark:text-slate-400">{t("booking.tapEditLocation")}</p>
+            )}
+            {isEditingAddress && hasAddressChanges && (
+              <p className="text-xs text-gray-500 dark:text-slate-400">{t("booking.tapConfirmLocation")}</p>
+            )}
+            {!isEditingAddress && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingAddress(true);
+                setDraftAddress(address);
+                setAddressTouched(true);
+                setLocationError("");
+                setTimeout(() => addressInputRef.current?.focus(), 0);
+              }}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 sm:w-auto"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {t("booking.edit")}
+            </button>
+            )}
+            {isEditingAddress && hasAddressChanges && (
+            <button
+              type="button"
+              onClick={() => {
+                setAddress(draftAddress);
+                setAddressTouched(true);
+                setIsEditingAddress(false);
+              }}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-100 sm:w-auto"
+            >
+              {t("booking.save")}
+            </button>
+            )}
+          </div>
+          {locationError && (
+            <p className="text-xs text-red-600 mt-2">{locationError}</p>
           )}
           {addressMissing && (
-            <p className="text-xs text-red-600 mt-2">Service Address is required.</p>
+            <p className="text-xs text-red-600 mt-2">{t("booking.addressRequired")}</p>
           )}
           {showRequiredError && addressNeedsConfirmation && (
             <p className="text-xs text-red-600 mt-2">
-              Please confirm your address changes before booking.
+              {t("booking.confirmAddress")}
             </p>
           )}
         </div>
 
         {/* Phone Number */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
+        <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-blue-600" />
+                <Phone className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800">Phone Number</h3>
-                <p className="text-xs text-gray-500">We will contact you if needed</p>
+                <h3 className="font-semibold text-gray-800 dark:text-slate-100">{t("booking.phoneNumber")}</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{t("booking.phoneHint")}</p>
               </div>
             </div>
             <button
@@ -540,7 +673,7 @@ export function Booking() {
               className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
             >
               <Pencil className="w-3.5 h-3.5" />
-              Edit
+              {t("booking.edit")}
             </button>
             {isEditingPhone && (
               <button
@@ -554,7 +687,7 @@ export function Booking() {
                 }}
                 className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-100"
               >
-                Confirm
+                {t("booking.confirm")}
               </button>
             )}
           </div>
@@ -564,49 +697,32 @@ export function Booking() {
             onChange={(e) => {
               setDraftPhone(e.target.value);
             }}
-            placeholder="Enter your phone number..."
+            placeholder={t("booking.enterPhone")}
             readOnly={!isEditingPhone}
             className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 ${
               phoneMissing
                 ? "border-red-400 focus:ring-red-400"
                 : "border-gray-200 focus:ring-blue-500"
-            } ${!isEditingPhone ? "bg-gray-50 text-gray-500 cursor-default" : "bg-white text-gray-800"}`}
+            } ${!isEditingPhone ? "cursor-default bg-gray-50 text-gray-500 dark:bg-slate-700 dark:text-slate-400" : "bg-white text-gray-800 dark:bg-slate-800 dark:text-slate-100"}`}
           />
           {!isEditingPhone && phone.trim() !== "" && (
-            <p className="text-xs text-gray-500 mt-2">Tap Edit to change this phone number.</p>
+            <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">{t("booking.tapEditPhone")}</p>
           )}
           {phoneMissing && (
-            <p className="text-xs text-red-600 mt-2">Phone number is required.</p>
+            <p className="text-xs text-red-600 mt-2">{t("booking.phoneRequired")}</p>
           )}
           {showRequiredError && phoneNeedsConfirmation && (
             <p className="text-xs text-red-600 mt-2">
-              Please confirm your phone number changes before booking.
+              {t("booking.confirmPhone")}
             </p>
           )}
         </div>
 
-        {/* Photo Upload */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <Upload className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-800">Upload Photo (Optional)</h3>
-              <p className="text-xs text-gray-500">Help us understand the issue</p>
-            </div>
-          </div>
-          <button className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors">
-            <Upload className="w-5 h-5 mx-auto mb-1" />
-            <span className="text-sm">Click to upload</span>
-          </button>
-        </div>
-
         {/* Use Points */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
+        <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-800">Use Points</h3>
-            <p className="text-xs text-gray-500">You have {currentPoints} pts</p>
+            <h3 className="font-semibold text-gray-800 dark:text-slate-100">{t("booking.usePoints")}</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400">{t("booking.havePoints", { count: currentPoints })}</p>
           </div>
 
           <div className="grid grid-cols-4 gap-2 mb-3">
@@ -617,52 +733,52 @@ export function Booking() {
                 className={`py-2 rounded-xl text-xs font-medium transition-colors ${
                   selectedRedeemPoints === points
                     ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
                 }`}
               >
-                {points === 0 ? "No Use" : `${points} pts`}
+                {points === 0 ? t("booking.noUse") : `${localizeDigits(points)} pts`}
               </button>
             ))}
           </div>
 
           <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
             {selectedRedeemPoints === 0
-              ? "Select points to get discount based on your reward tier."
-              : `${selectedRedeemPoints} points applied = ${formatMMK(redeemDiscount)} discount`}
+              ? t("booking.selectPoints")
+              : t("booking.pointsApplied", { points: selectedRedeemPoints, amount: formatMMK(redeemDiscount) })}
           </p>
         </div>
 
         {/* Price Summary */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-          <h3 className="font-semibold text-gray-800 mb-3">Price Summary</h3>
+        <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
+          <h3 className="mb-3 font-semibold text-gray-800 dark:text-slate-100">{t("booking.priceSummary")}</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Service Fee</span>
-              <span className="text-gray-800">{formatMMK(baseAmount)}</span>
+              <span className="text-gray-600 dark:text-slate-300">{t("booking.serviceFee")}</span>
+              <span className="text-gray-800 dark:text-slate-100">{formatMMK(baseAmount)}</span>
             </div>
             {selectedRedeemPoints > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Points Discount</span>
+                <span className="text-gray-600 dark:text-slate-300">{t("booking.pointsDiscount")}</span>
                 <span className="text-green-600">- {formatMMK(redeemDiscount)}</span>
               </div>
             )}
-            <div className="h-px bg-gray-200 my-2" />
+            <div className="my-2 h-px bg-gray-200 dark:bg-slate-700" />
             <div className="flex justify-between">
-              <span className="font-semibold text-gray-800">Total Payable</span>
+              <span className="font-semibold text-gray-800 dark:text-slate-100">{t("booking.totalPayable")}</span>
               <span className="font-semibold text-blue-600 text-lg">{formatMMK(totalPayable)}</span>
             </div>
           </div>
         </div>
 
         {/* Payment Method */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-6">
+        <div className="mb-6 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
               <CreditCard className="w-5 h-5 text-blue-600" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-800">Payment Method</h3>
-              <p className="text-xs text-gray-500">KBZPay</p>
+              <h3 className="font-semibold text-gray-800 dark:text-slate-100">{t("booking.paymentMethod")}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400">KBZPay</p>
             </div>
           </div>
         </div>
@@ -673,14 +789,14 @@ export function Booking() {
           disabled={isSubmitting}
           className="w-full bg-blue-600 text-white rounded-2xl px-6 py-4 font-semibold text-lg shadow-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? "Confirming..." : "Confirm Booking"}
+          {isSubmitting ? t("booking.confirming") : t("booking.confirmBooking")}
         </button>
         {submitError && (
           <p className="text-sm text-red-600 mt-3">{submitError}</p>
         )}
         {showRequiredError && (
           <p className="text-sm text-red-600 mt-3">
-            Please fill Date, Time, Service Address, and Phone Number with a valid future booking time, and confirm any address or phone changes before booking.
+            {t("booking.requiredSummary")}
           </p>
         )}
       </div>

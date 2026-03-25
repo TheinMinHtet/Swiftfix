@@ -1,1 +1,8 @@
+body {
+  font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
 
+html[data-lang="my"] body {
+  font-family: "Noto Sans Myanmar", "Myanmar Text", "Pyidaungsu", Inter, "Segoe UI", sans-serif;
+  line-height: 1.55;
+}

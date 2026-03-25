@@ -145,36 +145,36 @@ export function Rating() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="bg-white px-5 py-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm">
+    <div className="min-h-screen bg-gray-50 pb-20 transition-colors dark:bg-slate-900">
+      <div className="sticky top-0 z-10 flex items-center gap-4 bg-white px-5 py-4 shadow-sm transition-colors dark:bg-slate-900/95 dark:shadow-slate-950/30">
         <Link
           to="/orders"
-          className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 transition-colors dark:bg-slate-800"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
+          <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-slate-200" />
         </Link>
         <div>
-          <h1 className="text-lg font-semibold text-gray-800">Rate Service</h1>
-          <p className="text-xs text-gray-500">Order #{resolvedOrderId || orderId}</p>
-          {serviceName && <p className="text-xs text-gray-500">{serviceName}</p>}
+          <h1 className="text-lg font-semibold text-gray-800 dark:text-slate-100">Rate Service</h1>
+          <p className="text-xs text-gray-500 dark:text-slate-400">Order #{resolvedOrderId || orderId}</p>
+          {serviceName && <p className="text-xs text-gray-500 dark:text-slate-400">{serviceName}</p>}
         </div>
       </div>
 
       <div className="px-5 py-6">
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-          <h2 className="font-semibold text-gray-800 mb-3">Rate Your Experience</h2>
+        <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
+          <h2 className="mb-3 font-semibold text-gray-800 dark:text-slate-100">Rate Your Experience</h2>
           <div className="flex gap-2">
             {[1, 2, 3, 4, 5].map((starValue) => (
               <button
                 key={starValue}
                 onClick={() => setRating(starValue)}
-                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 transition-colors dark:bg-slate-700"
               >
                 <Star
                   className={`w-5 h-5 ${
                     starValue <= rating
                       ? "fill-yellow-400 text-yellow-400"
-                      : "text-gray-400"
+                      : "text-gray-400 dark:text-slate-400"
                   }`}
                 />
               </button>

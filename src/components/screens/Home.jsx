@@ -1,4 +1,4 @@
-import { Search, MapPin, ChevronDown, Award } from "lucide-react";
+import { Search, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import Slider from "react-slick";
 import { useEffect, useState } from "react";
@@ -6,6 +6,9 @@ import { getServices } from "../../../api/services-api";
 import { getAdvertisements } from "../../../api/ads-api";
 import { mapApiServicesToCatalog } from "../../utils/services-catalog";
 import { getUsers } from "../../../api/user-api";
+import { ThemeToggle } from "../ThemeToggle.jsx";
+import { LanguageToggle } from "../LanguageToggle.jsx";
+import { useI18n } from "../../utils/i18n.js";
 const advertisementFallbackColors = [
   "from-cyan-600 to-blue-600",
   "from-purple-600 to-pink-600",
@@ -45,6 +48,7 @@ function renderServiceTitle(name) {
 }
 
 export function Home() {
+  const { t, localizeDigits } = useI18n();
   const [userPoints, setUserPoints] = useState(0);
   const [filteredServices, setFilteredServices] = useState([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
@@ -144,13 +148,17 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20 transition-colors dark:bg-slate-900">
       {/* Header Section */}
-      <div className="bg-blue-600 px-5 pt-12 pb-8 rounded-b-3xl">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <p className="text-blue-100 text-sm">Welcome !</p>
-            <h1 className="text-white text-2xl mt-1">Aung Ko Ko</h1>
+      <div className="bg-blue-600 px-5 pt-12 pb-8 rounded-b-3xl dark:bg-blue-950">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
+        <div className="mb-6 w-full">
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-[2px]">
+            <p className="text-blue-100 text-sm">{t("home.welcome")}</p>
+            <h1 className="mt-1 text-white text-2xl">Aung Ko Ko</h1>
           </div>
         </div>
 
@@ -166,38 +174,31 @@ export function Home() {
               </div>
               <div>
                 <p className="text-yellow-900 text-xs font-medium">
-                  Current Points
+                  {t("home.currentPoints")}
                 </p>
                 <p className="text-yellow-900 font-semibold text-lg">
-                  {userPoints} pts
+                  {localizeDigits(userPoints)} pts
                 </p>
               </div>
             </div>
             <div>
               <span className="bg-white/80 text-yellow-800 text-xs font-semibold px-3 py-1.5 rounded-full">
-                Active
+                {t("home.active")}
               </span>
             </div>
           </div>
         </Link>
-
-        {/* Location Selector */}
-        <button className="flex items-center gap-2 text-white mb-6">
-          <MapPin className="w-5 h-5" />
-          <span className="text-sm">Yangon, Downtown</span>
-          <ChevronDown className="w-4 h-4" />
-        </button>
 
         {/* Search Bar */}
         <Link
           to="/services"
           state={{ focusSearch: true }}
           aria-label="Go to services search"
-          className="w-full bg-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm text-left"
+          className="flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3 text-left shadow-sm transition-colors dark:bg-slate-800"
         >
-          <Search className="w-5 h-5 text-gray-400" aria-hidden="true" />
-          <span className="flex-1 text-sm text-gray-400">
-            What service do you need?
+          <Search className="h-5 w-5 text-gray-400 dark:text-slate-400" aria-hidden="true" />
+          <span className="flex-1 text-sm text-gray-400 dark:text-slate-400">
+            {t("home.searchPlaceholder")}
           </span>
         </Link>
       </div>
@@ -206,20 +207,20 @@ export function Home() {
         {/* Service Categories - Horizontal Scroll */}
         <div className="mb-6">
           <div className="px-5 mb-2 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Our Services
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
+              {t("home.ourServices")}
             </h2>
             <Link to="/services" className="text-blue-600 text-sm font-medium">
-              See All
+              {t("home.seeAll")}
             </Link>
           </div>
           <div className="overflow-x-auto scrollbar-hide">
             <div className="flex gap-4 px-5 mb-1">
               {isLoadingServices && (
-                <div className="text-sm text-gray-500">Loading services...</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">{t("home.loadingServices")}</div>
               )}
               {!isLoadingServices && servicesError && (
-                <div className="text-sm text-red-500">{servicesError}</div>
+                <div className="text-sm text-red-500">{t("home.unableServices")}</div>
               )}
               {filteredServices.map((service) => {
                 const Icon = service.icon;
@@ -227,14 +228,14 @@ export function Home() {
                   <Link
                     key={service.id}
                     to={`/service/${service.id}`}
-                    className="flex-shrink-0 w-32 bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
+                    className="flex-shrink-0 w-32 rounded-2xl bg-white p-4 shadow-sm transition-all hover:shadow-md dark:bg-slate-800 dark:shadow-slate-950/30"
                   >
                     <div
                       className={`w-12 h-12 ${service.color} rounded-2xl flex items-center justify-center mb-2`}
                     >
                       <Icon className="w-6 h-6" />
                     </div>
-                    <h3 className="text-gray-800 font-medium text-sm">
+                    <h3 className="text-sm font-medium text-gray-800 dark:text-slate-100">
                       {service.name}
                     </h3>
                   </Link>
@@ -247,19 +248,19 @@ export function Home() {
         {/* Advertisement Carousel */}
         <div className="mb-6">
           <div className="px-5 mb-2 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Advertisements
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
+              {t("home.advertisements")}
             </h2>
           </div>
           <div className="px-5">
             <Slider {...carouselSettings}>
               {isLoadingAds && (
-                <div className="text-sm text-gray-500">
-                  Loading advertisements...
+                <div className="text-sm text-gray-500 dark:text-slate-400">
+                  {t("home.loadingAdvertisements")}
                 </div>
               )}
               {!isLoadingAds && adsError && (
-                <div className="text-sm text-red-500">{adsError}</div>
+                <div className="text-sm text-red-500">{t("home.unableAdvertisements")}</div>
               )}
               {!isLoadingAds &&
                 !adsError &&
@@ -298,7 +299,7 @@ export function Home() {
 
         {/* Footer Services Section */}
         <div className="px-5">
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">
+          <h2 className="mb-2 text-lg font-semibold text-gray-800 dark:text-slate-100">
             Popular Services
           </h2>
           <div className="grid grid-cols-2 gap-4">
@@ -308,17 +309,17 @@ export function Home() {
                 <Link
                   key={service.id}
                   to={`/service/${service.id}`}
-                  className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+                  className="rounded-2xl bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-slate-800 dark:shadow-slate-950/30"
                 >
                   <div
                     className={`w-14 h-14 ${service.color} rounded-2xl flex items-center justify-center mb-3`}
                   >
                     <Icon className="w-7 h-7" />
                   </div>
-                  <h3 className="text-gray-800 font-medium leading-5 min-h-10">
+                  <h3 className="min-h-10 leading-5 font-medium text-gray-800 dark:text-slate-100">
                     {renderServiceTitle(service.name)}
                   </h3>
-                  <p className="text-gray-500 text-xs mt-1">
+                  <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
                     {service.priceLabel}
                   </p>
                 </Link>

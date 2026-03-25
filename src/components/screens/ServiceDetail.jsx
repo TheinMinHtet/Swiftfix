@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ImageWithFallback } from "../figma/ImageWithFallback.jsx";
 import { getServices } from "../../../api/services-api";
 import { getReviews } from "../../../api/reviews-api";
+import { useI18n } from "../../utils/i18n.js";
 
 const formatReviewDate = (value) => {
   if (!value) return "";
@@ -13,6 +14,7 @@ const formatReviewDate = (value) => {
 };
 
 export function ServiceDetail() {
+  const { t } = useI18n();
   const { id } = useParams();
   const [service, setService] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,18 +108,18 @@ export function ServiceDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5">
-        <p className="text-gray-600">Loading service detail...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5 dark:bg-slate-900">
+        <p className="text-gray-600 dark:text-slate-300">Loading service detail...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5 dark:bg-slate-900">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-800 mb-2">Something went wrong</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <h1 className="mb-2 text-xl font-semibold text-gray-800 dark:text-slate-100">Something went wrong</h1>
+          <p className="mb-4 text-gray-600 dark:text-slate-300">{error}</p>
           <Link
             to="/"
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
@@ -132,10 +134,10 @@ export function ServiceDetail() {
   // Fallback in case service is not found
   if (!service) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5 dark:bg-slate-900">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-800 mb-2">Service Not Found</h1>
-          <p className="text-gray-600 mb-4">The service you're looking for doesn't exist.</p>
+          <h1 className="mb-2 text-xl font-semibold text-gray-800 dark:text-slate-100">Service Not Found</h1>
+          <p className="mb-4 text-gray-600 dark:text-slate-300">The service you're looking for doesn't exist.</p>
           <Link
             to="/"
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
@@ -148,13 +150,13 @@ export function ServiceDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 transition-colors dark:bg-slate-900">
       {/* Header with Back Button */}
-      <div className="bg-white px-5 py-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm">
-        <Link to="/" className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
+      <div className="sticky top-0 z-10 flex items-center gap-4 bg-white px-5 py-4 shadow-sm transition-colors dark:bg-slate-900/95 dark:shadow-slate-950/30">
+        <Link to="/" className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 transition-colors dark:bg-slate-800">
+          <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-slate-200" />
         </Link>
-        <h1 className="text-lg font-semibold text-gray-800">{serviceName}</h1>
+        <h1 className="text-lg font-semibold text-gray-800 dark:text-slate-100">{serviceName}</h1>
       </div>
 
       {/* Service Image Banner */}
@@ -168,27 +170,27 @@ export function ServiceDetail() {
 
       <div className="px-5 py-6">
         {/* Service Info Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-5">
+        <div className="mb-5 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-1">
+              <h2 className="mb-1 text-xl font-semibold text-gray-800 dark:text-slate-100">
                 {serviceName}
               </h2>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-slate-200">
                 {serviceRating.toFixed(1)}
               </span>
             </div>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-slate-400">
               ({serviceReviews} reviews)
             </span>
               </div>
             </div>
           </div>
 
-          <p className="text-gray-600 text-sm leading-relaxed mb-4">
+          <p className="mb-4 text-sm leading-relaxed text-gray-600 dark:text-slate-300">
             {serviceDescription}
           </p>
 
@@ -201,9 +203,9 @@ export function ServiceDetail() {
         </div>
 
         {/* Customer Reviews */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-5">
+        <div className="mb-5 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Customer Reviews</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-slate-100">Customer Reviews</h3>
             <Link to={`/service/${id}/reviews`} className="text-blue-600 text-sm font-medium">
               See All
             </Link>
@@ -211,13 +213,13 @@ export function ServiceDetail() {
 
           <div className="space-y-4">
             {isLoadingReviews && (
-              <p className="text-sm text-gray-500">Loading reviews...</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">Loading reviews...</p>
             )}
             {!isLoadingReviews && reviewsError && (
               <p className="text-sm text-red-500">{reviewsError}</p>
             )}
             {!isLoadingReviews && !reviewsError && reviews.slice(0, 3).map((review) => (
-              <div key={review.id} className="pb-4 border-b border-gray-100 last:border-0 last:pb-0">
+              <div key={review.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -226,8 +228,8 @@ export function ServiceDetail() {
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-800">{review.name}</p>
-                      <p className="text-xs text-gray-500">{review.date}</p>
+                      <p className="text-sm font-medium text-gray-800 dark:text-slate-100">{review.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">{review.date}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -246,7 +248,7 @@ export function ServiceDetail() {
               </div>
             ))}
             {!isLoadingReviews && !reviewsError && reviews.length === 0 && (
-              <p className="text-sm text-gray-500">No reviews yet.</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">No reviews yet.</p>
             )}
           </div>
         </div>
@@ -256,9 +258,9 @@ export function ServiceDetail() {
           to={`/booking/${id}`}
           className="bg-blue-600 text-white rounded-2xl px-6 py-4 flex items-center justify-between shadow-lg hover:bg-blue-700 transition-colors"
         >
-          <span className="text-lg font-semibold">Book Now</span>
-          <ChevronRight className="w-6 h-6" />
-        </Link>
+          <span className="text-lg font-semibold">{t("booking.bookNow")}</span>
+        <ChevronRight className="w-6 h-6" />
+      </Link>
       </div>
     </div>
   );
