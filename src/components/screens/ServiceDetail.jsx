@@ -93,17 +93,8 @@ export function ServiceDetail() {
     service?.Mini_Shin__description__CST ||
     service?.description ||
     "No description available.";
-  const fallbackRating = service?.Mini_Shin__rating__CST ?? service?.rating ?? 0;
-  const fallbackReviews = service?.Mini_Shin__reviews__CST ?? service?.reviews ?? 0;
-  const reviewCount = reviews.length;
-  const reviewAverage =
-    reviewCount > 0
-      ? Math.round(
-          (reviews.reduce((sum, item) => sum + (Number.isFinite(item.rating) ? item.rating : 0), 0) / reviewCount) * 10
-        ) / 10
-      : 0;
-  const serviceRating = reviewCount > 0 ? reviewAverage : fallbackRating;
-  const serviceReviews = reviewCount > 0 ? reviewCount : fallbackReviews;
+  const serviceRating = Number(service?.Mini_Shin__rating__CST ?? service?.rating ?? 0);
+  const serviceReviews = Number(service?.Mini_Shin__reviews__CST ?? service?.reviews ?? 0);
   const priceFrom = service?.Mini_Shin__priceFrom__CST ?? service?.priceFrom;
   const priceTo = service?.Mini_Shin__priceTo__CST ?? service?.priceTo;
   const servicePriceRange =
@@ -187,7 +178,7 @@ export function ServiceDetail() {
                 <div className="flex items-center gap-1">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
               <span className="text-sm font-medium text-gray-700">
-                {reviewCount > 0 ? serviceRating.toFixed(1) : serviceRating}
+                {serviceRating.toFixed(1)}
               </span>
             </div>
             <span className="text-sm text-gray-500">
@@ -272,3 +263,4 @@ export function ServiceDetail() {
     </div>
   );
 }
+
