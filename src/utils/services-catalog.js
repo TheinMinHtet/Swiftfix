@@ -139,6 +139,11 @@ function extractServiceDescription(service, fallbackDescription) {
   return fallbackDescription;
 }
 
+function extractIsPopular(service) {
+  const value = service?.Mini_Shin__isPopular__CST ?? service?.isPopular;
+  return value === true || value === 1 || value === "1";
+}
+
 export function mapApiServicesToCatalog(rawServices) {
   if (!Array.isArray(rawServices)) return [];
 
@@ -157,6 +162,7 @@ export function mapApiServicesToCatalog(rawServices) {
     unique.set(id, {
       id,
       name: name.trim(),
+      isPopular: extractIsPopular(service),
       ...meta,
       shortDescription: extractServiceDescription(service, meta.shortDescription),
       ...extractServicePriceData(service),

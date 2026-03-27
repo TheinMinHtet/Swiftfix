@@ -4,7 +4,6 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(() => {
   return {
-
     plugins: [
       react({
         babel: {

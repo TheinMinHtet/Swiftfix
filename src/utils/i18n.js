@@ -15,6 +15,7 @@ const translations = {
     "home.active": "Active",
     "home.searchPlaceholder": "What service do you need?",
     "home.ourServices": "Our Services",
+    "home.popularServices": "Popular Services",
     "home.seeAll": "See All",
     "home.loadingServices": "Loading services...",
     "home.unableServices": "Unable to load services.",

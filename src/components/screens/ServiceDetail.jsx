@@ -14,7 +14,7 @@ const formatReviewDate = (value) => {
 };
 
 export function ServiceDetail() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { id } = useParams();
   const [service, setService] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,7 +109,9 @@ export function ServiceDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-5 dark:bg-slate-900">
-        <p className="text-gray-600 dark:text-slate-300">Loading service detail...</p>
+        <p className="text-gray-600 dark:text-slate-300">
+          {language === "my" ? "ဝန်ဆောင်မှု အသေးစိတ် တင်နေသည်..." : "Loading service detail..."}
+        </p>
       </div>
     );
   }
@@ -195,7 +197,9 @@ export function ServiceDetail() {
           </p>
 
           <div className="bg-blue-50 rounded-xl p-4">
-            <p className="text-xs text-blue-600 font-medium mb-1">PRICE RANGE</p>
+            <p className="text-xs text-blue-600 font-medium mb-1">
+              {language === "my" ? "စျေးနှုန်း အပိုင်းအခြား" : "PRICE RANGE"}
+            </p>
             <p className="text-lg font-semibold text-blue-700">
               {servicePriceRange}
             </p>
@@ -205,7 +209,9 @@ export function ServiceDetail() {
         {/* Customer Reviews */}
         <div className="mb-5 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-slate-100">Customer Reviews</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-slate-100">
+              {language === "my" ? "ဖောက်သည် သုံးသပ်ချက်များ" : "Customer Reviews"}
+            </h3>
             <Link to={`/service/${id}/reviews`} className="text-blue-600 text-sm font-medium">
               See All
             </Link>

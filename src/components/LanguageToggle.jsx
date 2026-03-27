@@ -9,7 +9,7 @@ export function LanguageToggle() {
       <button
         type="button"
         onClick={() => setLanguage("en")}
-        className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+        className={`inline-flex items-center justify-center rounded-full px-3 pt-[7px] pb-[5px] text-[11px] font-semibold leading-none transition-colors ${
           language === "en"
             ? "bg-white text-blue-700"
             : "text-white/85 hover:bg-white/10"
@@ -20,7 +20,7 @@ export function LanguageToggle() {
       <button
         type="button"
         onClick={() => setLanguage("my")}
-        className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+        className={`inline-flex items-center justify-center rounded-full px-3 pt-[7px] pb-[5px] text-[11px] font-semibold leading-none transition-colors ${
           language === "my"
             ? "bg-white text-blue-700"
             : "text-white/85 hover:bg-white/10"

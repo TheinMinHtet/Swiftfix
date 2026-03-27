@@ -48,7 +48,7 @@ function renderServiceTitle(name) {
 }
 
 export function Home() {
-  const { t, localizeDigits } = useI18n();
+  const { t, localizeDigits, language } = useI18n();
   const [userPoints, setUserPoints] = useState(0);
   const [filteredServices, setFilteredServices] = useState([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
@@ -146,6 +146,8 @@ export function Home() {
     autoplaySpeed: 3000,
     arrows: false,
   };
+
+  const popularServices = filteredServices.filter((service) => service.isPopular === true);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 transition-colors dark:bg-slate-900">
@@ -300,10 +302,10 @@ export function Home() {
         {/* Footer Services Section */}
         <div className="px-5">
           <h2 className="mb-2 text-lg font-semibold text-gray-800 dark:text-slate-100">
-            Popular Services
+            {language === "my" ? "လူကြိုက်များသော ဝန်ဆောင်မှုများ" : t("home.popularServices")}
           </h2>
           <div className="grid grid-cols-2 gap-4">
-            {filteredServices.slice(0, 4).map((service) => {
+            {popularServices.map((service) => {
               const Icon = service.icon;
               return (
                 <Link
