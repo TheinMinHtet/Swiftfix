@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 export type UserProfile = {
     userId: string | null;
-    fullname: string | null;
+    fullName: string | null;
     msisdn: string | null;
     points: number;
     isActive: number;
@@ -19,7 +19,7 @@ type UserStore = {
 
 export const defaultUserProfile: UserProfile = {
     userId: null,
-    fullname: null,
+    fullName: null,
     msisdn: null,
     points: 0,
     isActive: 1,

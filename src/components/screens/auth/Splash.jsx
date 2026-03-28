@@ -19,7 +19,7 @@ function getUserProfileFromResponse(response) {
 
   return {
     userId: result?.userId || result?.user_id || "",
-    fullname: result?.fullName || result?.fullname || result?.name || "",
+    fullName: result?.fullName || result?.fullname || result?.name || "",
     msisdn: result?.msisdn || result?.phone || "",
     openid: result?.openid || null,
     points: 0,
@@ -57,7 +57,7 @@ export function Splash() {
           throw new Error("Missing access token in splash login response");
         }
 
-        if (!userProfile.userId || !userProfile.fullname || !userProfile.msisdn) {
+        if (!userProfile.userId || !userProfile.fullName || !userProfile.msisdn) {
           throw new Error("Missing required user fields in splash login response");
         }
 
@@ -69,7 +69,7 @@ export function Splash() {
         setMessage("Syncing your profile...");
         await syncUserToBackend({
           userId: userProfile.userId,
-          fullname: userProfile.fullname,
+          fullName: userProfile.fullName,
           msisdn: userProfile.msisdn,
           points: userProfile.points,
           isActive: userProfile.isActive,

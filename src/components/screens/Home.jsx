@@ -52,7 +52,7 @@ export function Home() {
   const { t, localizeDigits, language } = useI18n();
   const profile = useUserStore((state) => state.profile);
   const [userPoints, setUserPoints] = useState(0);
-  const [userName, setUserName] = useState(profile.fullname || "");
+  const [userName, setUserName] = useState(profile.fullName || "");
   const [filteredServices, setFilteredServices] = useState([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [servicesError, setServicesError] = useState("");
@@ -66,7 +66,7 @@ export function Home() {
     const loadUserPoints = async () => {
       try {
         const fallbackPoints = profile.points ?? 0;
-        const fallbackName = profile.fullname || "";
+        const fallbackName = profile.fullName || "";
         if (isMounted) {
           setUserPoints(fallbackPoints);
           setUserName(fallbackName);
@@ -79,13 +79,13 @@ export function Home() {
         const normalized = normalizeUser(user);
         if (isMounted) {
           setUserPoints(normalized.points);
-          setUserName(normalized.fullname || fallbackName);
+          setUserName(normalized.fullName || fallbackName);
         }
       } catch (error) {
         console.error("Failed to load user points:", error);
         if (isMounted) {
           setUserPoints(profile.points ?? 0);
-          setUserName(profile.fullname || "");
+          setUserName(profile.fullName || "");
         }
       }
     };
@@ -94,7 +94,7 @@ export function Home() {
     return () => {
       isMounted = false;
     };
-  }, [profile.fullname, profile.points, profile.userId]);
+  }, [profile.fullName, profile.points, profile.userId]);
 
   useEffect(() => {
     const fetchServices = async () => {

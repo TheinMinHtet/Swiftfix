@@ -2,12 +2,12 @@ import { coreApiClient } from "../axios/core-api-client";
 
 export type UserApiItem = {
     Mini_Shin__userId__CST?: string;
-    Mini_Shin__fullname__CST?: string;
+    Mini_Shin__fullName__CST?: string;
     Mini_Shin__msisdn__CST?: string;
     Mini_Shin__points__CST?: number;
     Mini_Shin__isActive__CST?: number;
     userId?: string;
-    fullname?: string;
+    fullName?: string;
     msisdn?: string;
     points?: number;
     isActive?: number;
@@ -16,7 +16,7 @@ export type UserApiItem = {
 
 export type NormalizedUser = {
     userId: string;
-    fullname: string;
+    fullName: string;
     msisdn: string;
     points: number;
     isActive: number;
@@ -25,7 +25,7 @@ export type NormalizedUser = {
 
 export type SyncUserInput = {
     userId: string;
-    fullname: string;
+    fullName: string;
     msisdn: string;
     points?: number;
     isActive?: number;
@@ -46,7 +46,10 @@ function extractUsers(payload: any): UserApiItem[] {
 export function normalizeUser(user?: UserApiItem | null): NormalizedUser {
     return {
         userId: user?.Mini_Shin__userId__CST || user?.userId || user?.id || "",
-        fullname: user?.Mini_Shin__fullname__CST || user?.fullname || "",
+        fullName:
+            user?.fullName ||
+            user?.Mini_Shin__fullName__CST ||
+            "",
         msisdn: user?.Mini_Shin__msisdn__CST || user?.msisdn || "",
         points: Number(user?.Mini_Shin__points__CST ?? user?.points ?? 0),
         isActive: Number(user?.Mini_Shin__isActive__CST ?? user?.isActive ?? 1),
@@ -85,13 +88,13 @@ export const createUser = async (input: SyncUserInput) => {
     const payload = {
         input: {
             userId: input.userId,
-            fullname: input.fullname,
+            fullname: input.fullName,
             msisdn: input.msisdn,
             points: input.points ?? 0,
             isActive: input.isActive ?? 1,
         },
         userId: input.userId,
-        fullname: input.fullname,
+        fullname: input.fullName,
         msisdn: input.msisdn,
         points: input.points ?? 0,
         isActive: input.isActive ?? 1,
@@ -109,7 +112,7 @@ export const createUser = async (input: SyncUserInput) => {
 export const syncUserToBackend = async (input: SyncUserInput) => {
     const normalizedInput: SyncUserInput = {
         userId: input.userId,
-        fullname: input.fullname,
+        fullName: input.fullName,
         msisdn: input.msisdn,
         points: input.points ?? 0,
         isActive: input.isActive ?? 1,

@@ -33,7 +33,7 @@ export function Rating() {
     const fetchUser = async () => {
       try {
         const fallbackId = profile.userId || DEFAULT_USER_ID;
-        const fallbackName = profile.fullname || DEFAULT_USER_NAME;
+        const fallbackName = profile.fullName || DEFAULT_USER_NAME;
         setUserId(fallbackId);
         setUserName(fallbackName);
 
@@ -43,7 +43,7 @@ export function Rating() {
         const firstUser = users?.[0];
         const normalized = normalizeUser(firstUser);
         const resolvedId = normalized.userId || fallbackId;
-        const resolvedName = normalized.fullname || fallbackName;
+        const resolvedName = normalized.fullName || fallbackName;
         setUserId(resolvedId);
         setUserName(resolvedName);
       } catch (error) {
@@ -52,7 +52,7 @@ export function Rating() {
     };
 
     fetchUser();
-  }, [profile.fullname, profile.userId]);
+  }, [profile.fullName, profile.userId]);
 
   useEffect(() => {
     const fetchOrder = async () => {
