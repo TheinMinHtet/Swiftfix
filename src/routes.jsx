@@ -9,21 +9,31 @@ import { Orders } from "./components/screens/Orders.jsx";
 import { Services } from "./components/screens/Services.jsx";
 import { Points } from "./components/screens/Points.jsx";
 import { Rating } from "./components/screens/Rating.jsx";
+import { Splash } from "./components/screens/auth/Splash.jsx";
 
-export const router = createMemoryRouter([
+export const router = createMemoryRouter(
+  [
+    {
+      path: "/splash",
+      Component: Splash,
+    },
+    {
+      path: "/",
+      Component: Layout,
+      children: [
+        { index: true, Component: Home },
+        { path: "service/:id", Component: ServiceDetail },
+        { path: "service/:id/reviews", Component: ServiceReviews },
+        { path: "services", Component: Services },
+        { path: "booking/:id", Component: Booking },
+        { path: "tracking/:orderId", Component: Tracking },
+        { path: "orders", Component: Orders },
+        { path: "points", Component: Points },
+        { path: "rating/:orderId", Component: Rating },
+      ],
+    },
+  ],
   {
-    path: "/",
-    Component: Layout,
-    children: [
-      { index: true, Component: Home },
-      { path: "service/:id", Component: ServiceDetail },
-      { path: "service/:id/reviews", Component: ServiceReviews },
-      { path: "services", Component: Services },
-      { path: "booking/:id", Component: Booking },
-      { path: "tracking/:orderId", Component: Tracking },
-      { path: "orders", Component: Orders },
-      { path: "points", Component: Points },
-      { path: "rating/:orderId", Component: Rating },
-    ],
+    initialEntries: ["/splash"],
   },
-]);
+);
