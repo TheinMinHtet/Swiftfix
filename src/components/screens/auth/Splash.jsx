@@ -5,22 +5,27 @@ import { useUserStore } from "../../../../store/user-store";
 import { syncUserToBackend } from "../../../../api/user-api";
 import { getAuthCodeAsync, splashLoginAsync } from "./query";
 
-function getTokenFromResponse(response) {
-  return (
-    response?.result?.access_token ||
-    response?.access_token ||
-    response?.token ||
-    null
-  );
-}
-
 function getUserProfileFromResponse(response) {
   const result = response?.result || {};
+  const userId = (result?.userId || result?.user_id || result?.id || "").trim();
+  const fullName = (
+    result?.fullName ||
+    result?.fullname ||
+    result?.full_name ||
+    result?.name ||
+    ""
+  ).trim();
+  const msisdn = (
+    result?.msisdn ||
+    result?.phone ||
+    result?.mobile ||
+    ""
+  ).trim();
 
   return {
-    userId: result?.userId || result?.user_id || "",
-    fullName: result?.fullName || result?.fullname || result?.name || "",
-    msisdn: result?.msisdn || result?.phone || "",
+    userId,
+    fullName,
+    msisdn,
     openid: result?.openid || null,
     points: 0,
     isActive: 1,
@@ -50,23 +55,24 @@ export function Splash() {
 
         setMessage("Signing you in...");
         const response = await splashLoginAsync(authCode);
-        const accessToken = getTokenFromResponse(response);
         const userProfile = getUserProfileFromResponse(response);
 
-        if (!accessToken) {
-          throw new Error("Missing access token in splash login response");
-        }
-
-        if (!userProfile.userId || !userProfile.fullName || !userProfile.msisdn) {
-          throw new Error("Missing required user fields in splash login response");
+        if (
+          !userProfile.userId ||
+          !userProfile.fullName ||
+          !userProfile.msisdn
+        ) {
+          throw new Error(
+            "Missing required user fields in splash login response",
+          );
         }
 
         if (!cancelled) {
-          setAccessToken(accessToken);
           setUserProfile(userProfile);
         }
 
         setMessage("Syncing your profile...");
+        console.log("User profile from splash response:", userProfile);
         await syncUserToBackend({
           userId: userProfile.userId,
           fullName: userProfile.fullName,
@@ -77,7 +83,10 @@ export function Splash() {
 
         if (!cancelled) {
           setMessage("Welcome to SwiftFix");
-          timerRef.current = window.setTimeout(() => navigate("/", { replace: true }), 700);
+          timerRef.current = window.setTimeout(
+            () => navigate("/", { replace: true }),
+            700,
+          );
         }
       } catch (error) {
         console.error("Splash initialization failed:", error);
