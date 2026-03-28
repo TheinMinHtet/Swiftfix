@@ -2,10 +2,33 @@ import { coreApiClient } from "../axios/core-api-client";
 
 export type UserApiItem = {
     Mini_Shin__userId__CST?: string;
-    Mini_Shin__name__CST?: string;
+    Mini_Shin__fullname__CST?: string;
+    Mini_Shin__msisdn__CST?: string;
+    Mini_Shin__points__CST?: number;
+    Mini_Shin__isActive__CST?: number;
     userId?: string;
-    name?: string;
+    fullname?: string;
+    msisdn?: string;
+    points?: number;
+    isActive?: number;
     id?: string;
+};
+
+export type NormalizedUser = {
+    userId: string;
+    fullname: string;
+    msisdn: string;
+    points: number;
+    isActive: number;
+    raw: UserApiItem | Record<string, any>;
+};
+
+export type SyncUserInput = {
+    userId: string;
+    fullname: string;
+    msisdn: string;
+    points?: number;
+    isActive?: number;
 };
 
 function extractUsers(payload: any): UserApiItem[] {
@@ -18,6 +41,17 @@ function extractUsers(payload: any): UserApiItem[] {
     if (Array.isArray(payload?.data)) return payload.data;
     if (Array.isArray(payload?.result?.data)) return payload.result.data;
     return [];
+}
+
+export function normalizeUser(user?: UserApiItem | null): NormalizedUser {
+    return {
+        userId: user?.Mini_Shin__userId__CST || user?.userId || user?.id || "",
+        fullname: user?.Mini_Shin__fullname__CST || user?.fullname || "",
+        msisdn: user?.Mini_Shin__msisdn__CST || user?.msisdn || "",
+        points: Number(user?.Mini_Shin__points__CST ?? user?.points ?? 0),
+        isActive: Number(user?.Mini_Shin__isActive__CST ?? user?.isActive ?? 1),
+        raw: user || {},
+    };
 }
 
 export const getUsers = async (userId?: string) => {
@@ -45,4 +79,55 @@ export const getUsers = async (userId?: string) => {
         console.error("User info API error:", error?.response?.data || error?.message || error);
         throw error;
     }
+};
+
+export const createUser = async (input: SyncUserInput) => {
+    const payload = {
+        input: {
+            userId: input.userId,
+            fullname: input.fullname,
+            msisdn: input.msisdn,
+            points: input.points ?? 0,
+            isActive: input.isActive ?? 1,
+        },
+        userId: input.userId,
+        fullname: input.fullname,
+        msisdn: input.msisdn,
+        points: input.points ?? 0,
+        isActive: input.isActive ?? 1,
+    };
+
+    try {
+        const response = await coreApiClient.post("/user_info_input_api", payload);
+        return response.data;
+    } catch (error: any) {
+        console.error("User create API error:", error?.response?.data || error?.message || error);
+        throw error;
+    }
+};
+
+export const syncUserToBackend = async (input: SyncUserInput) => {
+    const normalizedInput: SyncUserInput = {
+        userId: input.userId,
+        fullname: input.fullname,
+        msisdn: input.msisdn,
+        points: input.points ?? 0,
+        isActive: input.isActive ?? 1,
+    };
+
+    const existingUsers = await getUsers(normalizedInput.userId).catch(() => []);
+    const existingUser = existingUsers.find((item) => normalizeUser(item).userId === normalizedInput.userId);
+
+    if (existingUser) {
+        return {
+            skipped: true,
+            user: normalizeUser(existingUser),
+        };
+    }
+
+    const created = await createUser(normalizedInput);
+    return {
+        skipped: false,
+        result: created,
+    };
 };

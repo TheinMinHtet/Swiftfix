@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../../store/auth-store";
+import { useUserStore } from "../../../../store/user-store";
+import { syncUserToBackend } from "../../../../api/user-api";
 import { getAuthCodeAsync, splashLoginAsync } from "./query";
 
 function getTokenFromResponse(response) {
@@ -12,12 +14,28 @@ function getTokenFromResponse(response) {
   );
 }
 
+function getUserProfileFromResponse(response) {
+  const result = response?.result || {};
+
+  return {
+    userId: result?.userId || result?.user_id || "",
+    fullname: result?.fullName || result?.fullname || result?.name || "",
+    msisdn: result?.msisdn || result?.phone || "",
+    openid: result?.openid || null,
+    points: 0,
+    isActive: 1,
+    splashResponse: response || null,
+  };
+}
+
 export function Splash() {
   const navigate = useNavigate();
   const setAccessToken = useAuthStore((state) => state.setAccessToken);
+  const setUserProfile = useUserStore((state) => state.setUserProfile);
   const [message, setMessage] = useState("Preparing your experience...");
   const [errorMessage, setErrorMessage] = useState("");
   const startedRef = useRef(false);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -33,29 +51,50 @@ export function Splash() {
         setMessage("Signing you in...");
         const response = await splashLoginAsync(authCode);
         const accessToken = getTokenFromResponse(response);
+        const userProfile = getUserProfileFromResponse(response);
 
-        if (!cancelled && accessToken) {
-          setAccessToken(accessToken);
+        if (!accessToken) {
+          throw new Error("Missing access token in splash login response");
+        }
+
+        if (!userProfile.userId || !userProfile.fullname || !userProfile.msisdn) {
+          throw new Error("Missing required user fields in splash login response");
         }
 
         if (!cancelled) {
+          setAccessToken(accessToken);
+          setUserProfile(userProfile);
+        }
+
+        setMessage("Syncing your profile...");
+        await syncUserToBackend({
+          userId: userProfile.userId,
+          fullname: userProfile.fullname,
+          msisdn: userProfile.msisdn,
+          points: userProfile.points,
+          isActive: userProfile.isActive,
+        });
+
+        if (!cancelled) {
           setMessage("Welcome to SwiftFix");
-          setTimeout(() => navigate("/", { replace: true }), 700);
+          timerRef.current = window.setTimeout(() => navigate("/", { replace: true }), 700);
         }
       } catch (error) {
         console.error("Splash initialization failed:", error);
         if (!cancelled) {
           setErrorMessage("Unable to initialize the app. Please try again.");
-          setMessage("Retrying...");
-          setTimeout(() => navigate("/", { replace: true }), 1200);
+          setMessage("Profile setup failed.");
         }
       }
     })();
 
     return () => {
       cancelled = true;
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+      }
     };
-  }, [navigate, setAccessToken]);
+  }, [navigate, setAccessToken, setUserProfile]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-600 via-blue-700 to-blue-900 px-6 py-10 text-white dark:from-slate-900 dark:via-slate-800 dark:to-blue-950">

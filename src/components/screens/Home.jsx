@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import { getServices } from "../../../api/services-api";
 import { getAdvertisements } from "../../../api/ads-api";
 import { mapApiServicesToCatalog } from "../../utils/services-catalog";
-import { getUsers } from "../../../api/user-api";
+import { getUsers, normalizeUser } from "../../../api/user-api";
 import { ThemeToggle } from "../ThemeToggle.jsx";
 import { LanguageToggle } from "../LanguageToggle.jsx";
 import { useI18n } from "../../utils/i18n.js";
+import { useUserStore } from "../../../store/user-store";
 const advertisementFallbackColors = [
   "from-cyan-600 to-blue-600",
   "from-purple-600 to-pink-600",
@@ -49,7 +50,9 @@ function renderServiceTitle(name) {
 
 export function Home() {
   const { t, localizeDigits, language } = useI18n();
+  const profile = useUserStore((state) => state.profile);
   const [userPoints, setUserPoints] = useState(0);
+  const [userName, setUserName] = useState(profile.fullname || "");
   const [filteredServices, setFilteredServices] = useState([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [servicesError, setServicesError] = useState("");
@@ -62,13 +65,28 @@ export function Home() {
 
     const loadUserPoints = async () => {
       try {
-        const users = await getUsers("USR-1001");
+        const fallbackPoints = profile.points ?? 0;
+        const fallbackName = profile.fullname || "";
+        if (isMounted) {
+          setUserPoints(fallbackPoints);
+          setUserName(fallbackName);
+        }
+
+        if (!profile.userId) return;
+
+        const users = await getUsers(profile.userId);
         const user = users?.[0];
-        const points = user?.Mini_Shin__points__CST ?? user?.points ?? 0;
-        if (isMounted) setUserPoints(points);
+        const normalized = normalizeUser(user);
+        if (isMounted) {
+          setUserPoints(normalized.points);
+          setUserName(normalized.fullname || fallbackName);
+        }
       } catch (error) {
         console.error("Failed to load user points:", error);
-        if (isMounted) setUserPoints(0);
+        if (isMounted) {
+          setUserPoints(profile.points ?? 0);
+          setUserName(profile.fullname || "");
+        }
       }
     };
 
@@ -76,7 +94,7 @@ export function Home() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [profile.fullname, profile.points, profile.userId]);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -160,7 +178,7 @@ export function Home() {
         <div className="mb-6 w-full">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-[2px]">
             <p className="text-blue-100 text-sm">{t("home.welcome")}</p>
-            <h1 className="mt-1 text-white text-2xl">Aung Ko Ko</h1>
+            <h1 className="mt-1 text-white text-2xl">{userName || "SwiftFix User"}</h1>
           </div>
         </div>
 

@@ -209,6 +209,10 @@ export function Tracking() {
   const showProvider = effectiveStatus === "confirmed";
   const showEta = effectiveStatus === "confirmed" && currentStep >= 1;
   const isPaidStatus = effectiveStatus === "confirmed" || effectiveStatus === "completed";
+  const providerPhone =
+    provider?.Mini_Shin__phone__CST ||
+    provider?.phone ||
+    "";
   const formatMMK = (amount) =>
     localizeDigits(`${(Number.isFinite(amount) ? amount : 0).toLocaleString()} MMK`);
 
@@ -372,6 +376,14 @@ export function Tracking() {
             <p className="text-sm font-semibold text-amber-800 mt-2">
               {t("tracking.timeLeft", { time: countdownText })}
             </p>
+
+            <button
+              type="button"
+              className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white opacity-70"
+            >
+              Pay with KBZPay
+            </button>
+            
           </div>
         )}
 
@@ -404,7 +416,12 @@ export function Tracking() {
           {/* Contact Buttons */}
           <div className="grid grid-cols-1 gap-3">
             <button
-  onClick={() => window.location.href = `tel:${provider?.Mini_Shin__phone__CST || "+959123456789"}`}
+  onClick={() => {
+    if (providerPhone) {
+      window.location.href = `tel:${providerPhone}`;
+    }
+  }}
+  disabled={!providerPhone}
   className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors"
 >
   <Phone className="w-5 h-5" />

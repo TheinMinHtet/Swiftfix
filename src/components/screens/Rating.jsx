@@ -2,14 +2,16 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Star } from "lucide-react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { createReview } from "../../../api/reviews-api";
-import { getUsers } from "../../../api/user-api";
+import { getUsers, normalizeUser } from "../../../api/user-api";
 import { getOrders } from "../../../api/orders-api";
 import { getReviews } from "../../../api/reviews-api";
+import { useUserStore } from "../../../store/user-store";
 
-const DEFAULT_USER_ID = "USR-1001";
-const DEFAULT_USER_NAME = "Aung Ko Ko";
+const DEFAULT_USER_ID = "";
+const DEFAULT_USER_NAME = "";
 
 export function Rating() {
+  const profile = useUserStore((state) => state.profile);
   const { orderId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ export function Rating() {
   const serviceId = new URLSearchParams(location.search).get("serviceId") || "";
   const orderNoParam = new URLSearchParams(location.search).get("orderNo") || "";
   const [rating, setRating] = useState(0);
-  const [showError, setShowError] = useState(false);
+  const [showRatingError, setShowRatingError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [userId, setUserId] = useState(DEFAULT_USER_ID);
@@ -30,17 +32,18 @@ export function Rating() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const users = await getUsers();
+        const fallbackId = profile.userId || DEFAULT_USER_ID;
+        const fallbackName = profile.fullname || DEFAULT_USER_NAME;
+        setUserId(fallbackId);
+        setUserName(fallbackName);
+
+        if (!profile.userId) return;
+
+        const users = await getUsers(profile.userId);
         const firstUser = users?.[0];
-        const resolvedId =
-          firstUser?.Mini_Shin__userId__CST ||
-          firstUser?.userId ||
-          firstUser?.id ||
-          DEFAULT_USER_ID;
-        const resolvedName =
-          firstUser?.Mini_Shin__name__CST ||
-          firstUser?.name ||
-          DEFAULT_USER_NAME;
+        const normalized = normalizeUser(firstUser);
+        const resolvedId = normalized.userId || fallbackId;
+        const resolvedName = normalized.fullname || fallbackName;
         setUserId(resolvedId);
         setUserName(resolvedName);
       } catch (error) {
@@ -49,7 +52,7 @@ export function Rating() {
     };
 
     fetchUser();
-  }, []);
+  }, [profile.fullname, profile.userId]);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -108,21 +111,21 @@ export function Rating() {
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      setShowError(true);
+      setShowRatingError(true);
       return;
     }
     if (isAlreadyReviewed) {
-      setShowError(true);
+      setShowRatingError(false);
       setSubmitError("This order is already reviewed.");
       return;
     }
     if (!resolvedServiceId) {
-      setShowError(true);
+      setShowRatingError(false);
       setSubmitError("Missing service ID. Please retry from Orders.");
       return;
     }
 
-    setShowError(false);
+    setShowRatingError(false);
     setSubmitError("");
     setIsSubmitting(true);
 
@@ -135,7 +138,7 @@ export function Rating() {
         name: userName,
         rating,
       });
-      navigate(`/service/${serviceId}/reviews`);
+      navigate(`/service/${resolvedServiceId}/reviews`);
     } catch (error) {
       console.error("Failed to submit review:", error);
       setSubmitError("Failed to submit review. Please try again.");
@@ -180,7 +183,7 @@ export function Rating() {
               </button>
             ))}
           </div>
-          {showError && (
+          {showRatingError && (
             <p className="text-xs text-red-600 mt-2">Please select a rating.</p>
           )}
         {submitError && (

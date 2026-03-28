@@ -7,8 +7,9 @@ import {
   Info,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getUsers } from "../../../api/user-api";
+import { getUsers, normalizeUser } from "../../../api/user-api";
 import { useI18n } from "../../utils/i18n.js";
+import { useUserStore } from "../../../store/user-store";
 
 // Updated with a 50-point entry tier for better feasibility
 const pointDiscountRules = [
@@ -21,6 +22,7 @@ const pointDiscountRules = [
 
 export function Points() {
   const { t, localizeDigits } = useI18n();
+  const profile = useUserStore((state) => state.profile);
   const [currentPoints, setCurrentPoints] = useState(0);
 
   useEffect(() => {
@@ -28,13 +30,16 @@ export function Points() {
 
     const loadUserPoints = async () => {
       try {
-        const users = await getUsers("USR-1001");
+        if (isMounted) setCurrentPoints(profile.points ?? 0);
+        if (!profile.userId) return;
+
+        const users = await getUsers(profile.userId);
         const user = users?.[0];
-        const points = user?.Mini_Shin__points__CST ?? user?.points ?? 0;
-        if (isMounted) setCurrentPoints(points);
+        const normalized = normalizeUser(user);
+        if (isMounted) setCurrentPoints(normalized.points);
       } catch (error) {
         console.error("Failed to load user points:", error);
-        if (isMounted) setCurrentPoints(0);
+        if (isMounted) setCurrentPoints(profile.points ?? 0);
       }
     };
 
@@ -42,7 +47,7 @@ export function Points() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [profile.points, profile.userId]);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 transition-colors dark:bg-slate-900">

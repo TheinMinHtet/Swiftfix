@@ -2,10 +2,11 @@ import { ArrowLeft, Calendar, Clock, MapPin, CreditCard, Pencil, Phone, LocateFi
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getServices } from "../../../api/services-api";
-import { getUsers } from "../../../api/user-api";
+import { getUsers, normalizeUser } from "../../../api/user-api";
 import { createOrder } from "../../../api/orders-api";
 import { getProviders } from "../../../api/providers-api";
 import { useI18n } from "../../utils/i18n.js";
+import { useUserStore } from "../../../store/user-store";
 
 // Map points to the exact discount amounts from your Points system
 const discountMap = {
@@ -97,6 +98,7 @@ const isPastTimeSlotForDate = (dateValue, timeLabel) => {
 
 export function Booking() {
   const { t, localizeDigits } = useI18n();
+  const profile = useUserStore((state) => state.profile);
   const { id } = useParams();
   const navigate = useNavigate();
   const [service, setService] = useState(null);
@@ -172,25 +174,27 @@ export function Booking() {
   useEffect(() => {
     const fetchUserAddress = async () => {
       try {
-        const users = await getUsers();
+        if (profile.userId && !userId) {
+          setUserId(profile.userId);
+        }
+        if (!phoneTouched && profile.msisdn) {
+          setPhone(profile.msisdn);
+          setDraftPhone(profile.msisdn);
+        }
+        setCurrentPoints(profile.points ?? 0);
+
+        if (!profile.userId) return;
+
+        const users = await getUsers(profile.userId);
         const firstUser = users?.[0];
-        const resolvedUserId =
-          firstUser?.Mini_Shin__userId__CST ||
-          firstUser?.userId ||
-          firstUser?.id ||
-          "USR-1001";
+        const normalized = normalizeUser(firstUser);
+        const resolvedUserId = normalized.userId || profile.userId || "";
         const defaultAddress =
           firstUser?.Mini_Shin__address__CST ||
           firstUser?.address ||
           "";
-        const defaultPhone =
-          firstUser?.Mini_Shin__phone__CST ||
-          firstUser?.phone ||
-          "";
-        const userPoints =
-          firstUser?.Mini_Shin__points__CST ??
-          firstUser?.points ??
-          0;
+        const defaultPhone = normalized.msisdn || profile.msisdn || "";
+        const userPoints = normalized.points ?? profile.points ?? 0;
         if (!userId && resolvedUserId) {
           setUserId(resolvedUserId);
         }
@@ -208,15 +212,15 @@ export function Booking() {
         }
       } catch (error) {
         console.error("Error fetching user info for address:", error);
-        setCurrentPoints(0);
-        if (!userId) {
-          setUserId("USR-1001");
+        setCurrentPoints(profile.points ?? 0);
+        if (!userId && profile.userId) {
+          setUserId(profile.userId);
         }
       }
     };
 
     fetchUserAddress();
-  }, [addressTouched, phoneTouched, userId]);
+  }, [addressTouched, phoneTouched, profile.msisdn, profile.points, profile.userId, userId]);
 
   //const pointsToKyats = 30; // 100 points = 3,000 Ks
   const baseAmount =
