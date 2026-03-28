@@ -13,5 +13,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src", "api", "axios", "store", "vite-env.d.ts"]
+  "include": ["src", "api", "axios", "store", "vite-env.d.ts", "index.d.ts"]
 }
