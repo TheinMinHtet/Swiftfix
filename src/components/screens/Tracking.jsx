@@ -2,7 +2,10 @@ import { ArrowLeft, Phone, Check, Truck } from "lucide-react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ImageWithFallback } from "../figma/ImageWithFallback.jsx";
 import { useEffect, useMemo, useState } from "react";
-import { getOrders } from "../../../api/orders-api";
+import {
+  getOrders,
+  updateOrderStatus,
+} from "../../../api/orders-api";
 import { getProviders } from "../../../api/providers-api";
 import { useI18n } from "../../utils/i18n.js";
 import { submitPaymentAsync } from "./auth/query.js";
@@ -306,8 +309,8 @@ export function Tracking() {
   }, [order, t]);
 
   const handlePayment = async () => {
-    // ORD-TimeStamp-12345678
-    const paymentOrderId = `ORD-${Date.now()}`;
+    const paymentOrderId =
+      resolvedOrderNumber || resolvedRecordId || bookingSummary?.orderId || "";
 
     console.log("orderId:", paymentOrderId);
     console.log("displayedServiceName:", displayedServiceName);
@@ -351,8 +354,79 @@ export function Tracking() {
         throw new Error("Payment response is missing required KBZPay fields.");
       }
 
-      StartPay(startPayPayload, () => {
+      StartPay(startPayPayload, async () => {
         console.log("Payment flow completed callback");
+        const applyOrderState = (nextStatus, nextStatusStep, errorMessage = "") => {
+          setOrder((currentOrder) => {
+            if (!currentOrder) {
+              return {
+                id: resolvedRecordId || paymentOrderId,
+                orderId: paymentOrderId,
+                service: displayedServiceName,
+                dateLabel: displayedDate,
+                timeLabel: displayedTime,
+                address: displayedAddress,
+                amountMMK: displayedAmount,
+                status: nextStatus,
+                statusStep: nextStatusStep,
+              };
+            }
+
+            return {
+              ...currentOrder,
+              Mini_Shin__status__CST: nextStatus,
+              Mini_Shin__statusStep__CST: nextStatusStep,
+              status: nextStatus,
+              statusStep: nextStatusStep,
+              Mini_Shin__orderId__CST:
+                currentOrder?.Mini_Shin__orderId__CST || paymentOrderId,
+              orderId: currentOrder?.orderId || paymentOrderId,
+            };
+          });
+          setPaymentError(errorMessage);
+        };
+
+        try {
+          const updateResponse = await updateOrderStatus({
+            orderId: paymentOrderId,
+            newStatus: "confirmed",
+          });
+          const backendStatus = (
+            updateResponse?.result?.newStatus ||
+            updateResponse?.result?.status ||
+            "confirmed"
+          )
+            .toString()
+            .trim()
+            .toLowerCase();
+
+          if (backendStatus === "confirmed") {
+            applyOrderState("confirmed", "on_the_way", "");
+            return;
+          }
+
+          if (backendStatus === "cancelled" || backendStatus === "canceled") {
+            applyOrderState(
+              "cancelled",
+              "cancelled",
+              updateResponse?.result?.message ||
+                "This order expired before payment was completed.",
+            );
+            return;
+          }
+
+          setPaymentError(
+            updateResponse?.result?.message ||
+              "Payment completed, but order status could not be confirmed.",
+          );
+        } catch (error) {
+          console.error("Order status sync error:", error);
+          setPaymentError(
+            "Payment completed, but order sync is pending. Please refresh shortly.",
+          );
+        } finally {
+          setIsPaying(false);
+        }
       });
     } catch (error) {
       console.error("Payment error:", error);
@@ -361,7 +435,6 @@ export function Tracking() {
           ? error.message
           : "Unable to start payment. Please try again.",
       );
-    } finally {
       setIsPaying(false);
     }
   };
