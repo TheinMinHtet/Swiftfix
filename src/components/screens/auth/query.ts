@@ -1,5 +1,6 @@
 import { GetAuthCode } from "../../../utils/native-apis";
 import { loginWithAuthCode } from "../../../../api/auth-api";
+import { submitPayment } from "../../../../api/pay-api";
 
 export function getAuthCodeAsync(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -13,4 +14,12 @@ export function getAuthCodeAsync(): Promise<string> {
 
 export async function splashLoginAsync(authCode: string) {
   return loginWithAuthCode(authCode);
+}
+
+export async function submitPaymentAsync(
+  orderId: string,
+  serviceName: string,
+  amount: number,
+) {
+  return submitPayment(orderId, serviceName, amount);
 }

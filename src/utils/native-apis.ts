@@ -1,3 +1,5 @@
+import { IStartPay } from "../types/nativeAPIs";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const ShowLoading = () => {
   window.ma.showLoading({
@@ -167,5 +169,15 @@ export const CompressImageFromPath = async (
 
     // Load the image from file path
     img.src = filePath;
+  });
+};
+
+export const StartPay = (payload: IStartPay, cb?: () => void) => {
+  window.ma?.callNativeAPI("startPay", payload, (res: any) => {
+    console.log("payment response:", res);
+    if (res.resultCode == 1) {
+      console.log("start pay success");
+      cb?.();
+    }
   });
 };
