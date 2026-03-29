@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getServices } from "../../../api/services-api";
 import { getUsers, normalizeUser } from "../../../api/user-api";
-import { createOrder } from "../../../api/orders-api";
+import { createOrder, getOrders } from "../../../api/orders-api";
 import { getProviders } from "../../../api/providers-api";
 import { useI18n } from "../../utils/i18n.js";
 import { useUserStore } from "../../../store/user-store";
@@ -95,6 +95,101 @@ const isPastTimeSlotForDate = (dateValue, timeLabel) => {
   const scheduledDate = new Date(year, month - 1, day, parsedTime.hours, parsedTime.minutes, 0, 0);
   return scheduledDate.getTime() <= Date.now();
 };
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const normalizeComparableText = (value) =>
+  (value || "").toString().trim().toLowerCase();
+
+const extractOrderIdFromCreateResponse = (response) => {
+  const candidates = [
+    response?.result?.orderId,
+    response?.result?.Mini_Shin__orderId__CST,
+    response?.result?.result?.orderId,
+    response?.result?.result?.Mini_Shin__orderId__CST,
+    response?.data?.orderId,
+    response?.data?.Mini_Shin__orderId__CST,
+    response?.orderId,
+  ];
+
+  return candidates.find((value) => normalizeComparableText(value)) || "";
+};
+
+const matchesCreatedOrder = (order, criteria) => {
+  const orderUserId = normalizeComparableText(
+    order?.Mini_Shin__userId__CST || order?.userId,
+  );
+  const orderProviderId = normalizeComparableText(
+    order?.Mini_Shin__providerId__CST || order?.providerId,
+  );
+  const orderServiceId = normalizeComparableText(
+    order?.Mini_Shin__serviceId__CST || order?.serviceId,
+  );
+  const orderDate = normalizeComparableText(
+    order?.Mini_Shin__date__CST ||
+      order?.date ||
+      order?.Mini_Shin__dateLabel__CST ||
+      order?.dateLabel,
+  );
+  const orderTime = normalizeComparableText(
+    order?.Mini_Shin__time__CST ||
+      order?.time ||
+      order?.Mini_Shin__timeLabel__CST ||
+      order?.timeLabel,
+  );
+  const orderAddress = normalizeComparableText(
+    order?.Mini_Shin__address__CST || order?.address,
+  );
+  const orderPhone = normalizeComparableText(
+    order?.Mini_Shin__phoneNumber__CST ||
+      order?.phoneNumber ||
+      order?.Mini_Shin__phone__CST ||
+      order?.phone,
+  );
+  const orderExpiresAt = normalizeComparableText(
+    order?.Mini_Shin__expiresAt__CST || order?.expiresAt,
+  );
+
+  return (
+    orderUserId === criteria.userId &&
+    orderProviderId === criteria.providerId &&
+    orderServiceId === criteria.serviceId &&
+    orderDate === criteria.date &&
+    orderTime === criteria.time &&
+    orderAddress === criteria.address &&
+    orderPhone === criteria.phone &&
+    (!criteria.expiresAt || orderExpiresAt === criteria.expiresAt)
+  );
+};
+
+const resolveCreatedOrderId = async (response, criteria) => {
+  const directOrderId = extractOrderIdFromCreateResponse(response);
+  if (directOrderId) return directOrderId;
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const orders = await getOrders();
+    const matchedOrder = (orders || []).find((order) =>
+      matchesCreatedOrder(order, criteria),
+    );
+    const matchedOrderId =
+      matchedOrder?.Mini_Shin__orderId__CST ||
+      matchedOrder?.orderId ||
+      matchedOrder?.Mini_Shin__id__CST ||
+      matchedOrder?.id ||
+      "";
+
+    if (normalizeComparableText(matchedOrderId)) {
+      return matchedOrderId;
+    }
+
+    await sleep(750);
+  }
+
+  return "";
+};
+
+const createOrderResolutionError = () =>
+  new Error("Created order could not be resolved from the backend response.");
 
 export function Booking() {
   const { t, localizeDigits } = useI18n();
@@ -369,7 +464,7 @@ export function Booking() {
     }
 
     const expiresAt = getPendingExpiryIso();
-    createOrder({
+    const bookingPayload = {
       userId,
       providerId,
       serviceId,
@@ -381,15 +476,24 @@ export function Booking() {
       discountMMK: redeemDiscount || 0,
       phoneNumber: phone,
       expiresAt,
-    })
-      .then((response) => {
-        const orderIdFromApi =
-          response?.result?.orderId ||
-          response?.result?.Mini_Shin__orderId__CST ||
-          response?.result?.id ||
-          response?.orderId ||
-          "";
-        navigate(`/tracking/${orderIdFromApi || "ORD-NEW"}`, {
+    };
+    createOrder(bookingPayload)
+      .then(async (response) => {
+        const orderIdFromApi = await resolveCreatedOrderId(response, {
+          userId: normalizeComparableText(userId),
+          providerId: normalizeComparableText(providerId),
+          serviceId: normalizeComparableText(serviceId),
+          date: normalizeComparableText(selectedDate),
+          time: normalizeComparableText(selectedTime),
+          address: normalizeComparableText(address),
+          phone: normalizeComparableText(phone),
+          expiresAt: normalizeComparableText(expiresAt),
+        });
+        if (!orderIdFromApi) {
+          throw createOrderResolutionError();
+        }
+
+        navigate(`/tracking/${orderIdFromApi}`, {
           state: {
             bookingSummary: {
               serviceName:
@@ -402,14 +506,18 @@ export function Booking() {
               address,
               amountMMK: totalPayable,
               expiresAt,
-              orderId: orderIdFromApi || "ORD-NEW",
+              orderId: orderIdFromApi,
             },
           },
         });
       })
       .catch((error) => {
         console.error("Failed to create order:", error);
-        setSubmitError(t("booking.failedCreate"));
+        setSubmitError(
+          error?.message === createOrderResolutionError().message
+            ? "Booking was created, but we could not load the new order number yet. Please try again from Orders in a moment."
+            : t("booking.failedCreate"),
+        );
       })
       .finally(() => setIsSubmitting(false));
   };
@@ -511,7 +619,7 @@ export function Booking() {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 ${
+            className={`block w-full min-w-0 box-border rounded-xl border px-4 py-3 focus:outline-none focus:ring-2 dark:bg-slate-800 dark:text-slate-100 ${
               dateMissing
                 ? "border-red-400 focus:ring-red-400"
                 : "border-gray-200 focus:ring-blue-500"
@@ -795,6 +903,11 @@ export function Booking() {
         >
           {isSubmitting ? t("booking.confirming") : t("booking.confirmBooking")}
         </button>
+        {isSubmitting && (
+          <p className="text-sm text-gray-500 mt-3">
+            Loading your order number...
+          </p>
+        )}
         {submitError && (
           <p className="text-sm text-red-600 mt-3">{submitError}</p>
         )}
