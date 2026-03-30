@@ -339,6 +339,7 @@ export function Booking() {
   );
   const isSelectedTimeInPast = isPastTimeSlotForDate(selectedDate, selectedTime);
   const hasAddressChanges = draftAddress.trim() !== address.trim();
+  const hasAddressValue = draftAddress.trim() !== "" || address.trim() !== "";
   const addressNeedsConfirmation = isEditingAddress || hasAddressChanges;
   const hasPhoneChanges = draftPhone.trim() !== phone.trim();
   const phoneNeedsConfirmation = isEditingPhone || hasPhoneChanges;
@@ -619,7 +620,7 @@ export function Booking() {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className={`block w-full min-w-0 box-border rounded-xl border px-4 py-3 focus:outline-none focus:ring-2 dark:bg-slate-800 dark:text-slate-100 ${
+            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 bg-white text-gray-800 dark:bg-slate-800 dark:text-slate-100 ${
               dateMissing
                 ? "border-red-400 focus:ring-red-400"
                 : "border-gray-200 focus:ring-blue-500"
@@ -714,40 +715,41 @@ export function Booking() {
             rows={3}
           />
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            {!isEditingAddress && address.trim() !== "" && (
+            {!isEditingAddress && hasAddressValue && (
               <p className="text-xs text-gray-500 dark:text-slate-400">{t("booking.tapEditLocation")}</p>
             )}
-            {isEditingAddress && hasAddressChanges && (
+            {isEditingAddress && hasAddressValue && (
               <p className="text-xs text-gray-500 dark:text-slate-400">{t("booking.tapConfirmLocation")}</p>
             )}
-            {!isEditingAddress && (
-            <button
-              type="button"
-              onClick={() => {
-                setIsEditingAddress(true);
-                setDraftAddress(address);
-                setAddressTouched(true);
-                setLocationError("");
-                setTimeout(() => addressInputRef.current?.focus(), 0);
-              }}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 sm:w-auto"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              {t("booking.edit")}
-            </button>
-            )}
-            {isEditingAddress && hasAddressChanges && (
-            <button
-              type="button"
-              onClick={() => {
-                setAddress(draftAddress);
-                setAddressTouched(true);
-                setIsEditingAddress(false);
-              }}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-100 sm:w-auto"
-            >
-              {t("booking.save")}
-            </button>
+            {hasAddressValue && (
+              <div className="flex w-full gap-2 sm:w-auto">
+                <button
+                  type="button"
+                  disabled={isEditingAddress}
+                  onClick={() => {
+                    setIsEditingAddress(true);
+                    setDraftAddress(address);
+                    setAddressTouched(true);
+                    setLocationError("");
+                    setTimeout(() => addressInputRef.current?.focus(), 0);
+                  }}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  {t("booking.edit")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddress(draftAddress);
+                    setAddressTouched(true);
+                    setIsEditingAddress(false);
+                  }}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-100 sm:flex-none"
+                >
+                  {hasAddressChanges ? (t("booking.save") || "Save") : (t("booking.confirm") || "Confirm")}
+                </button>
+              </div>
             )}
           </div>
           {locationError && (
