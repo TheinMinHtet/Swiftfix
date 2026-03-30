@@ -606,7 +606,7 @@ export function Booking() {
         </div>
 
         {/* Date Picker */}
-        <div className="mb-4 rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
+        <div className="mb-4 overflow-hidden rounded-2xl bg-white p-5 shadow-sm transition-colors dark:bg-slate-800 dark:shadow-slate-950/30">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
               <Calendar className="w-5 h-5 text-blue-600" />
@@ -620,7 +620,7 @@ export function Booking() {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 bg-white text-gray-800 dark:bg-slate-800 dark:text-slate-100 ${
+            className={`block w-full min-w-0 max-w-full appearance-none px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 bg-white text-gray-800 dark:bg-slate-800 dark:text-slate-100 ${
               dateMissing
                 ? "border-red-400 focus:ring-red-400"
                 : "border-gray-200 focus:ring-blue-500"
